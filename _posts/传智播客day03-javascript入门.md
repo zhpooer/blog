@@ -1,7 +1,7 @@
-title: 传智播客day03
+title: 传智播客day03-javascript入门
 date: 2014-04-01 09:03:33
 tags:
-- 课堂笔记
+- 传智播客
 - javascript
 ---
 # TODO #

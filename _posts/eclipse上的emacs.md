@@ -25,7 +25,7 @@ add Control = Control_R
 以上是开胃菜，言归正传，身为一个Java程序猿，在IDE上编程总会有各种不适，从前研究过在
 emacs上使用emacs-jde编写java；在emacs上通过eclime使用eclipse的功能；或者在eclipse上用vim插件；
 均因为种种原因以失败告终，我可悲可叹的emacser人生，最后决定用 IdeaJ，他的按键绑定可以设置的很有emacs风格，
-不过还是和eclipse的使用习惯有一定的不习惯，特别是项目管理。直到今天，我发现了 [把Eclipse打造成Emacs]("http://blog.csdn.net/lzw_java/article/details/17016279")
+不过还是和eclipse的使用习惯有一定的不习惯，特别是项目管理。直到今天，我发现了 [把Eclipse打造成Emacs](http://blog.csdn.net/lzw_java/article/details/17016279)
 
 先按装好插件Emacs+，具体的我就不多说了，秀一下我的按键绑定吧：
 

@@ -1,7 +1,7 @@
-title: 传智播客day04
+title: 传智播客day04-DOM&BOM
 date: 2014-04-03 08:55:12
 tags:
-- 课堂笔记
+- 传智播客
 - javascript
 - DOM
 ---

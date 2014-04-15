@@ -1,7 +1,7 @@
-title: 传智播客day07
+title: 传智播客day07-junit&jdk5新特性
 date: 2014-04-07 09:01:39
 tags:
-- 课堂笔记
+- 传智播客
 - java
 ---
 # Tips #

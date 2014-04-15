@@ -1,7 +1,7 @@
-title: 传智播客Day02
+title: 传智播客Day02-html&css
 date: 2014-03-31 08:48:34
 tags:
-- 课堂笔记
+- 传智播客
 - html
 - css
 - javascript

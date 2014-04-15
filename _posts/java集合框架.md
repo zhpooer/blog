@@ -132,8 +132,81 @@ Collection<V> values();
 ## Hashtable ##
 内部结构是哈希表, 是同步的, 不支持空键和空值.
 > Properties: 用来存储键值对型的配置文件信息, 可以和IO技术结合
+
+
 ## HashMap ##
 内部结构是哈希表, 不是同步的. 允许空值和空键.
 
 ## TreeMap ##
 内部是二叉树, 不是同步的. 可以对Map中的键进行排序. 
+
+## LinkedHashMap ##
+有序的存储Map中的键
+
+
+# 集合框架工具 #
+
+## Collections ##
+是集合框架的工具类, 里面的方法都是静态的.
+~~~~~~
+Collections.sort(list, comparator); //对list集合进行指定顺序的排序
+Collections.sort(list); //对list集合进行指定顺序的排序
+Collections.swap(list); //对list位置进行交换
+
+Collections.binarySearch(list, comparator); // 二分法查找, 必须先排序
+Collections.max(set);
+Collections.min(set);
+
+Collections.reverseOrder(); // 对排序进行逆转
+new TreeSet<Sring>(Collections.reverseOrder());
+
+Collections.replaceAll(list, old, new);
+Collections.reverse(list);
+Collections.fill(list, obj); // 替换成所有同一个元素
+
+Collections.shuffle(list, obj); // 乱序排序
+
+Collections.list(enumeration); // 转成Arraylist
+
+Collections.synchronizedCollection(Collection|Set|Map); //返回一个同步的集合
+~~~~~~
+
+## Arrays ##
+~~~~~~
+binarySearch();
+copyOf();
+copyOfRange();
+fill();
+equals(); // 比较两个数组
+sort();
+deepEquals();
+toString(array);
+/** 如果数组中的元素是对象, 那么转成集合时, 直接将数组中的元素作为集合中的元素进行集合存储
+** 如果数组中的元素是基本类型, 那么会将该数组作为集合中的元素进行存储
+**/
+asList(array); // 将一个数组转换成固定长度的List
+int [] a = {1,3,4}
+List<int[]> x = Arrays.asList(a)
+
+
+~~~~~~
+集合变数组
+~~~~~~
+// 集合变成数组, 不能进行增删
+List<String> list = new ArrayList<String>()
+list.add("1")
+list.add("2")
+list.add("3")
+
+String[] arr = list.toArray(new String[4]) // [1,2,3,null]
+
+
+~~~~~~
+# 静态导入 #
+~~~~~~
+import static java.util.Collections.*; // 导入类中的静态成员
+
+impport static java.lang.System.*;
+
+out.println("hello world");
+~~~~~~

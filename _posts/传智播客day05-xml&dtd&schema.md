@@ -1,7 +1,7 @@
-title: 传智播客day05
+title: 传智播客day05-xml&dtd&schema
 date: 2014-04-04 09:20:29
 tags:
-- 课堂笔记
+- 传智播客
 - xml
 - dtd
 - schema
