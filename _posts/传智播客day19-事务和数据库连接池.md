@@ -41,7 +41,7 @@ Connection.setTransactionIsolation(int Level) // 必须放在事务开启之前
 ~~~~~~
 
 # 数据库连接池 #
-给数据库连接提供缓存
+给数据库连接提供缓存, 提供访问效率
 
 ## 版本一 ##
 ~~~~~~
