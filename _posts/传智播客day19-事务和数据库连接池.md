@@ -100,8 +100,8 @@ DataSource 中没有提供 `release()`, 可以修改 `Conneciton` 的 `close()`�
 * 装饰器模式:
   * 编写一个类, 实现与被包装类相同的接口(具有相同的行为)
   * 定义构造方法, 传入被包装类对象
-  * 对于要改变的方法, 书写那你的代码即可
-  * 对于不要改变的方法, 调用原有类的方法
+  * 对于要改写的方法, 书写你的代码即可
+  * 对于不要改写的方法, 调用原有类的方法
   ~~~~~~
   public class MyConnection implements java.sql.Connection{
       private Connection conn;
