@@ -262,6 +262,8 @@ msg.setContent("<a href='xxx'>激活</a>", "text/html;charset=utf-8");
 
 #### 发送一封邮件 ####
 
+[更加详细的介绍](http://pringles.iteye.com/blog/125196)
+
 JavaMail 核心类:
 * Message 代表一封邮件
 * Session 代表连接邮件服务器会话
@@ -278,7 +280,7 @@ JavaMail 核心类:
 Properties p = new Properties();
 p.setProperty("mail.smtp.host", "localhost");
 p.setProperty("mail.transport.protocol", "smtp");
-
+p.put("mail.smtp.auth","true"); // 如果是163需要验证, 要加上这句
 Session session = Session.getInstance(p);
 
 // 第二步, 编写邮件, 按照上一节代码
