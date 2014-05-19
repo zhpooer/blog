@@ -25,8 +25,8 @@ session.setAttribute("p", "ppp");
 // 取数据
 (String) session.getAttribute("p");
 
-session.getAttribute(true); // 如果没有session, 就创建
-session.getAttribute(false); // 没有sessioin, 不创建, 返回null
+req.getSession(true); // 如果没有session, 就创建
+req.getSession(false); // 没有sessioin, 不创建, 返回null
 ~~~~~~
 
 # session访问延时 #

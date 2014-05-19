@@ -138,6 +138,10 @@ public class HelloWorldAction {
     <package name="helloworld" namespace="/" extends="struts-default">
         <action name="helloworldAction" class="cn.itcast.action.HelloWorldAction">
             <result name="index"> index.jsp </result>
+            <!-- same as below -->
+            <!-- <result name="index"> -->
+            <!--     <param name="location">index.jsp </param> -->
+            <!-- </result> -->
         </action>
     </package>
 </struts>
@@ -163,8 +167,9 @@ struts 先加载 `struts-default.xml`, 后加载 `struts.xml`, 如果出现相�
 把 package 中 name为 *struts-default* 包中所有的功能继承下来
 ~~~~~~
 <!-- 继承了 helloworld -->
-<package name="childOfHello" extends="helloworld"> </package>
+<package name="childOfHello" extends="helloworld" namespace="/" abstract="false"> </package>
 ~~~~~~
+* abstract：可选值为true|false。说明他是一个抽象包。抽象包中没有action元素的。(默认为false)
 * 属性`namespace`, 与url相关,  如果 `namespace="/base"`,
 则要访问 `${contextPath/base/helloWorldaction.action}`, 但是 `${contextPath/base/a/helloWorldAction.action}`也能访问
   * 查找规则, 先在 `/base/a` 下找, 然后在 `/base` 下找
@@ -178,7 +183,284 @@ struts 先加载 `struts-default.xml`, 后加载 `struts.xml`, 如果出现相�
 <struts> <include file="included-struts.xml"/> </struts>
 ~~~~~~
 
-# struts Action 配置 #
+## 配置文件解析2 ##
+### package标签 ###
+必须直接或间接地继承自struts-default的包.
+
+作用: 方便管理我们的动作(struts-default是核心配置文件)
+
+属性：
+* abstract：可选值为true|false。说明他是一个抽象包。抽象包中没有action元素的。(默认为false)
+* name：包名。不能重复。方便管理动作的。
+* namespace：名称空间
+* extends：继承什么
+
+### action标签 ###
+* name: 必须的, 动作名称
+~~~~~~
+<package name="p2" extends="struts-default">
+    <!-- 只要找不到的action的name，找act4。默认动作名称 -->
+    <default-action-ref name="act4"></default-action-ref>
+</package> 
+~~~~~~
+* class：可选的。默认值是com.opensymphony.xwork2.ActionSupport
+~~~~~~
+<package name="p2" extends="struts-default">
+    <!-- 只要找不到的action的class，找com.opensymphony.xwork2.ActionSupport。默认class -->
+    <default-class-ref name="com.opensymphony.xwork2.ActionSupport"></default-class-ref>
+</package> 
+~~~~~~
+* method: 可选. 默认值是`public String execute(){return "success"}`
+
+### result标签 ###
+type：默认值dispatcher。转发，目标JSP
+
+name：默认值是success。
+~~~~~~
+<package name="default" namespace="/test" extends="struts-default">
+    <action name="hello" class="com.itheima.action.HelloAction" method="execute">
+        <result name="female">/female.jsp</result>
+        <result name="male">/male.jsp</result>
+    </action>
+</package>
+~~~~~~
+访问包中带有名称空间的动作时：
+* `http://localhost:8080/day22_01_strutsHello/test/hello.action`
+* `http://localhost:8080/day22_01_strutsHello/test/aaa/bbb/hello.action`
+
+动作有搜索顺寻：
+1. 从/test/aaa/bbb找，不存在
+2. 从/test/aaa找，不存在
+3. 从/test，找到了
+4. 一旦找到就不向上找了
+
+## struts2 结果类型 ##
+1. 结果类型其实就是一个实现com.opensymphony.xwork2.Result的类，用来输出你想要的结果
+2. 在struts-default.xml文件中已经提供了内置的几个结果类型
+
+### chain ###
+转发到另一个动作
+
+`<result-type name="chain" class="com.opensymphony.xwork2.ActionChainResult"/>`
+
+如果转发的动作在一个名称空间中
+~~~~~~
+<action name="testChain1" class="com.itheima.action.CaptchaAction" method="download">
+    <result name="success" type="chain">testChain2</result>
+</action>
+<action name="testChain2" class="com.itheima.action.CaptchaAction" method="download">
+    <result name="success" type="dispatcher">/2.jsp<result>
+</action> 
+~~~~~~
+如果转发的动作不在一个名称空间中
+~~~~~~
+<package>
+    <action name="testChain1" class="com.itheima.action.CaptchaAction" method="download">
+        <result name="success" type="chain">
+        <!-- 如果需要转发的动作不在一个名称空间内，则需要进行参数的设置（原理看chain源码） -->
+        <!-- 源码中有setNamespace和setActionName方法，去掉set，第一个字母改小写 -->
+            <param name="namespace">/result1</param>
+            <param name="actionName">testChain2</param>
+        </result>
+    </action>
+</package>
+<package name="p2" namespace="/result1" extends="base">
+    <action name="testChain2" class="com.itheima.action.CaptchaAction" method="download">
+        <result name="success" type="dispatcher">/2.jsp<result>
+    </action>
+</package>
+~~~~~~
+
+### dispatcher ###
+
+`<result-type name="dispatcher" class="org.apache.struts2.dispatcher.ServletDispatcherResult" default="true"/>(默认的)`
+
+请求转发（地址栏不会变）。struts配置
+~~~~~~
+<action name="testChain2" class="com.itheima.action.CaptchaAction" method="download">
+    <result name="success" type="dispatcher">/2.jsp<result>
+    <!-- 这两个设置效果相同 -->
+    <!--
+        <result name="success" type="dispatcher">
+            <param name="location">/2.jsp<result>
+        </result>
+    -->
+</action>
+~~~~~~
+
+### redirectAction ###
+`<result-type name="redirectAction" class="org.apache.struts2.dispatcher.ServletActionRedirectResult"/>`
+
+请求重定向到另一个动作
+~~~~~~
+<action name="testRedirect1" class="com.itheima.action.CaptchaAction" method="download">
+    <result name="success" type="redirectAction">testRedirect2</result>
+</action> 
+~~~~~~
+
+### redirect ###
+`<result-type name="redirect" class="org.apache.struts2.dispatcher.ServletRedirectResult"/>`
+
+请求重定向（地址栏会变）.
+~~~~~~
+<action name="testRedirect" class="com.itheima.action.CaptchaAction" method="download">
+    <result name="success" type="redirect">/2.jsp<result>
+</action> 
+~~~~~~
+
+### stream ###
+`<result-type name="stream" class="org.apache.struts2.dispatcher.StreamResult"/>`
+
+结果类型为流，例如用于文件下载(具体原理需要看源码，而源码的核心就是execute方法）
+struts.xml的配置(属性参数对应的都是类中的set方法）
+
+~~~~~~
+<action name="testStream" class="com.itheima.action.CaptchaAction" method="download">
+    <!-- 不需要转向或重定向的页面，因为直接下载就可以了 -->
+    <result name="success" type="stream"><!-- 在文档中拷贝以下参数 -->
+    <!-- 为了能让所有类型的文件都能下载，在Tomcat/conf/web.xml里面搜索bin，找到以下mapping参数 -->
+       <param name="contentType">application/octet-stream</param>
+    <!-- 查看Stream对应的类源代码,对应里面的字符串变量，根据这个字符串找输入流-->
+       <param name="inputName">imageStream</param>
+    <!-- 消息头的设置，指定下载，且指定下载文件名称 -->
+       <param name="contentDisposition">attachment;filename="1.jpg"</param>
+    <!-- 设置缓存的大小 -->
+       <param name="bufferSize">1024</param>
+    </result>
+</action>
+~~~~~~
+实现文件下载
+~~~~~~
+public class CaptchaAction {
+    //设置一个流，并生成set，get方法。
+    private InputStream imageStream;
+    public InputStream getImageStream() {
+        return imageStream;
+    }
+    public void setImageStream(InputStream imageStream) {
+        this.imageStream = imageStream;
+    }
+    public String download() throws FileNotFoundException{
+        //获得文件的真实路径
+        String realPath = ServletActionContext.getServletContext().getRealPath("/WEB-INF/111.jpg");
+        //获得文件输入流
+        imageStream = new FileInputStream(realPath);
+        return "success";
+    }
+    public String method1(){
+        try{
+            //int i=1/0;//人为制造异常，可以让catch转向全局结果集，error.jsp
+
+return "success";
+        }catch(Exception e){
+            return "error";
+        }
+    }
+}
+~~~~~~
+### plain ###
+`<result-type name="plainText" class="org.apache.struts2.dispatcher.PlainTextResult" />`
+
+显示指定页面的源代码（不好用，只有java语句才能显示源代码）
+
+~~~~~~
+<action name="testPlanText" class="com.itheima.action.CaptchaAction" method="showPlanText">
+    <result name="success" type="plainText">/1.jsp<result>
+</action>
+~~~~~~
+
+### 其他结果类型 ###
+
+~~~~~~
+<result-type name="httpheader" class="org.apache.struts2.dispatcher.HttpHeaderResult"/>
+<result-type name="freemarker" class="org.apache.struts2.views.freemarker.FreemarkerResult"/>显示模板。。。需要实验。
+<result-type name="velocity" class="org.apache.struts2.dispatcher.VelocityResult"/>显示模板。。。需要实验。
+<result-type name="xslt" class="org.apache.struts2.views.xslt.XSLTResult"/>(显示样式？）
+~~~~~~
+
+如果提供的结果类型不够用，就需要自定义了(注意需要实现Result接口)
+
+自定义完的结果类型，需要先声明，才能使用：（随机验证码图片结果类型，实际应用的案例）
+~~~~~~
+<package name="base" extends="struts-default">
+    <!-- 配置局部结果视图 -->
+    <result-types>
+        <result-type name="captchaResults" class="com.itheima.action.CaptchaResults"></result-type>
+    </result-types>
+    <!-- 配置全局结果视图, 只能配置在package里, 但是可以通过继承来使用 -->
+    <global-results>
+        <result name="error">/error.jsp</result>
+    </global-results>
+</package>
+<!-- 需继承base,因为自定义的局部结果视图配置在base里面,且base继承了核心配置文件 -->
+<package name="p1" namespace="/results" extends="base">
+    <action name="captcha" class="com.itheima.action.CaptchaAction" method="genImage">
+        <result type="captchaResults" name="success">
+            <!-- 调用结果处理类的setter方法，注入参数的值-->
+            <param name="width">600</param>
+            <param name="height">400</param>
+        </result>
+    </action>
+</package>
+~~~~~~
+
+### 全局结果类型 ###
+当很多提交请求跳转到相同的页面，这个时候，
+这个页面就可以成为全局的页面。在struts2中提供了全局页面的配置方法。
+~~~~~~
+<!-- 这个配置必须写在action配置的上面。dtd约束的规定。 -->
+<!-- 配置全局结果视图, 只能配置在package里, 但是可以通过继承来复用 -->
+<global-results>
+    <result name="success"> success.jsp </result>
+</global-results>
+~~~~~~
+
+# struts中存在一些内置常量 #
+在struts2-core-*.jar的org.apache.struts2的default.properties文件中存在一些内置常量
+
+~~~~~~
+<!-- request.setCharacterEncoding(), 针对post请求参数编码有效 -->
+<constant name="struts.i18n.encoding" value="UTF-8"></constant>
+<!-- 配置需要struts框架处理的uri的扩展名 -->
+<constant name="struts.action.extension" value="do,,action"></constant>
+<!-- 开发模式：打印更多的异常信息。配置文件会自动加载 -->
+<!-- devMode模式是开发模式，开启它则默认开启了struts.i18n.reload、struts.configuration.xml.reload -->
+<constant name="struts.devMode" value="true"></constant>
+<!-- 静态资源是不是设皇城, 开发阶段, 修改true -->
+<constant name="struts.server.static.browserCache" value="true"></constant>
+<!-- 配置不支持动态方法调用 -->
+<constant name="struts.enable.DynamicMethodInvocation" value="false"></constant>
+<!-- 让struts重新加载配置文件，但不会导致web应用重新启动。 -->
+<constant name="struts.configuration.xml.reload" value="false"></constant>
+<!-- 指定每次请求到达，重新加载资源文件 -->
+<constant name="struts.i18n.reload" value="true"/>
+<!-- 工厂类, 和spring 整合用 -->
+<constant name="struts.objectFactory" value="spring"/>
+<!-- 表达式直接访问static静态方法的开关 -->
+<constant name="struts.ognl.allowStaticMethodAccess" value="true"></constant>
+<!-- 配置全局国际化消息资源包,value写资源包的基名，多个资源包之间用逗号，分隔-->
+<constant name="struts.custom.i18n.resources" value="com.itheima.resources.msg"></constant>
+<!-- 更改strutsUI标签的显示样式模板，参考struts2-core-*.jar中的template -->
+<constant name="struts.ui.theme" value="xhtml"></constant>
+<!-- 动作名字里面默认是不允许出现/的,以下常量设置可以出现/ -->
+<constant name="struts.enable.SlashesInActionNames" value="true"></constant>
+<!-- 动作名字里面默认是不允许出现/的,如果有名称空间,除了以上常量,还需要打开这个开关 -->
+<constant name="struts.mapper.alwaysSelectFullNamespace" value="true"></constant> 
+~~~~~~
+
+常量可以在下面多个文件中进行定义，struts2加载常量的搜索顺序如下，后面的设置可以覆盖前面的设置：
+* default.properties文件
+* struts-default.xml
+* struts-plugin.xml
+* struts.xml
+* struts.properties（为了与webwork向后兼容而提供）
+* web.xml
+
+包含配置(<include>):在struts.xml文件这，使用<include>属性来包含其他配置文件，需要放在<struts>下,<package>外
+~~~~~~
+<include file="struts-mobile.xml"></include>
+~~~~~~
+# struts Action 初始化 #
 
 ~~~~~~
 // 方式一
@@ -190,16 +472,29 @@ public class MyAction implements com.opensymphony.xwork2.Action {
 // 方式二
 // 封装了一些常用功能, 如国际化 表单验证 等功能
 public class MyAction extends com.opensymphony.xwork2.ActionSupport {
-    public String execute() {
-    }
+    public String execute() { }
 }
-
 ~~~~~~
+
 ~~~~~~
 <!-- 方式三 -->
 <action name="anyName"> <!-- 没有写 class, 默认执行 com.opensymphony.xwork2.ActionSupport -->
-    <result> indelx.jsp </result>
+    <result> index.jsp </result>
 </action>
+~~~~~~
+## Action 依赖注入 ##
+
+~~~~~~
+public Action extends ActionSupport(){
+   @BeanProperty private String message;
+}
+~~~~~~
+~~~~~~
+<action>
+    <param name="message"> auto insert into </param>
+    <result type="redirect">/7.jsp?msg=${message} </result>
+</action>
+<!-- 7.jsp: ${param.msg} -->
 ~~~~~~
 
 ## 通配符映射 ##
@@ -269,3 +564,4 @@ public class MyAction extends com.opensymphony.xwork2.ActionSupport {
 ~~~~~~
 
 **通配的程度越高, 匹配的范围越大, 越容易出问题**
+

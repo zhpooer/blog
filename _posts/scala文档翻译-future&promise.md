@@ -165,7 +165,7 @@ f onFailure {
     println("I'd be amazed if this printed out.")
 }
 ~~~~~~
-回到我们之前关于查找第一个出现单词的案例, 你也许想要在屏幕输出这个单词的位置:
+回到我们之前关于查找单词第一个出现位置的案例, 你也许想要在屏幕输出这个单词的位置:
 ~~~~~~
 val firstOccurrence: Future[Int] = future {
   val source = scala.io.Source.fromFile("myText.txt")
@@ -178,8 +178,141 @@ firstOccurrence onFailure {
   case t => println("Could not process file: " + t.getMessage)
 }
 ~~~~~~
+`onComplete`, `onSuccess`, `onFailure` 方法返回的类型是 `Unit`,
+这就意味着这些方法的调用不能被链式调用(chained).
+这样的设计是刻意为之, 因为链式调用也许暗示着按照一定的顺序注册回调函数
+(那么就可以无序地在同一个futre中注册回调函数)
+
+也就是说, 我们现在可以讨论回调函数*什么时候*会被调用.
+因为这些回调函数需要 future 中的值, 所以直到 future 执行完成后, 它们才会被调用.
+然而, 也不能保证调用它们(callback)的线程是完成 futre 的线程或者创造回调函数的线程.
+反而, 当 future 执行完毕后, 在一定时间内回调函数会被一些其他线程执行.
+也就是说回调函数最终会被执行.
+
+更进一步的说, 回调函数被执行的顺序不是固定的, 甚至在多次运行的同一个应用程序中.
+实际上, 回调函数会不会被一个接一个地调用, 而是会被并行(concurrently)的执行.
+这就意味着在下面的例子中, totalA 的值就不确定是表示大写`a`的数量还是表示小写`a`的数量.
+~~~~~~
+@volatile var totalA = 0
+val text = future {
+  "na" * 16 + "BATMAN!!!"
+}
+text onSuccess {
+  case txt => totalA += txt.count(_ == 'a')
+}
+text onSuccess {
+  case txt => totalA += txt.count(_ == 'A')
+}
+~~~~~~
+在上面的例子中, 两个回调函数可能一个一个顺序执行, 那么 `totalA` 的值就为18.
+然而, 它们也可能并发的执行, 所以 `totalA` 的值不是16就是2,
+只是因为 `+=` 不是原子性操作(atomic operation)(它由读和写两部分组成)
+
+考虑到表述的完整性, 回调函数的使用的语法如下:
+1. 在 future 中注册一个 `onComplete` 回调, future 执行完成后, 回调函数最终会被执行.
+2. 用注册 `onComplete` 的语法, 注册一个 `onSuccess` 或 `onFailure`,
+   它们只会在 future 执行成功或执行失败分别调用.
+3. 在一个已经执行完成的 future 中, 注册回调函数, 这个回调函数最终还是会被调用.
+4. 在 future 中注册多个回调函数的情况下, 它们的执行顺序不是固定的.
+   实际上, 回调函数会被并发地执行. 然而, 特定的 `ExecutionContext` 实现可能会按明确的顺序来执行.
+5. 如果一些回调函数抛出了异常, 其他回调函数会不受影响, 继续执行.
+6. 在某些情况下, 有些回调函数永远不会结束(可能包含了无限循环), 其他的回调函数就可能不会被执行到.
+在这种情况下, 一个潜在的阻塞回调必须使用 `blocking` 构造函数(下面有介绍)
+7. 一旦执行, 回调函数将会从 future 中移除, 这样方便垃圾回收器回收. 
+
 
 ## Functional Composition and For-Comprehensions ##
+尽管前面介绍的回调机制已经足够把 future 的结果和后继计算结合起来.
+然而在有时候回调机制并不易于使用, 且会造成冗余的代码.
+我们可以通过一个案例来说明. 假使我们有一个 关于货币交易系统的API.
+假设这适合的点, 我们想买入美元. 我们先展示一下如何用回调来进行这个操作.
+~~~~~~
+val rateQuote = future {
+    connection.getCurrentValue(USD)
+}
+rateQuote onSuccess { case quote =>
+    val purchase = future {
+        if (isProfitable(quote)) connection.buy(amount, quote)
+        else throw new Exception("not profitable")
+    }
+    purchase onSuccess {
+        case _ => println("Purchased " + amount + " USD")
+    }
+}
+~~~~~~
+一开始我们创建一个获取货币交易的 future `rateQuote`.
+当从服务端得到数据, future 执行成功后, 计算执行操作才会进入 `onSuccess` 回调,
+这时, 我们开始决定买还是不买. 因此我们创建了另一个 future `purchase`,
+用来在可盈利的情况下做出购买决定, 然后向服务器发出请求.
+最后, 一旦购买完成, 我们会在标准输出中打印一条通知消息.
+
+这确实是可以行的, 但是由两点原因是这种方法并不方便.
+其一, 我们不得不使用 `onSuccess`, 且在其中嵌套调用 `purchase` future.
+假设, 我们要在 `purchase` 执行完成后卖出一些货币.
+这时我们不得不在`onSuccess`回调中重复这个模式, 从而使代码过度嵌套, 冗长且难以理解.
+
+其二, future `purchase` 没有在其余代码的范围内, 它只能在`onSuccess`回调内部响应.
+这就意味着其他部分的程序是取不到 `purchase` future,
+也不能注册其他的 `onSuccess` 回调函数, 比如说卖掉些货币.
+
+基于这两个原因, futures 提供了组合器(combinators)使之具有了更加易用的组合形式.
+`map`是最基础的组合器之一, 当给定一个 future 和一个映射函数(mapping function)来出来future的值,
+映射方法会产生一个新的future, 一旦最初的 future 成功地执行, 新的future会通过该返回值完成计算.
+你能够像理解容器(collections)的map一样来理解future的map.
+
+让我们用 `map` 组合子来重写上面的一个案例
+~~~~~~
+val rateQuote = future {
+  connection.getCurrentValue(USD)
+}
+
+val purchase = rateQuote map { quote => 
+  if (isProfitable(quote)) connection.buy(amount, quote)
+  else throw new Exception("not profitable")
+}
+
+purchase onSuccess {
+  case _ => println("Purchased " + amount + " USD")
+}
+~~~~~~
+
+通过对`rateQuote`使用 `map`, 我们减少了一次 `onSuccess`回调, 更重要的是避免了嵌套调用.
+如果我们现在决定要卖掉一些其他货币, 就可以再次对 `purchase` 使用 `map`了.
+
+但是如果 `isProfitable` 返回 `false`, 因此引起了一个异常, 那怎么办呢?
+在这种情况下, `purchase` 会因为异常而失败. 更进一步地说, 如果连接服务器失败,
+使得 `getCurrentValue` 抛错, 最终使 `rateQuote` 失败了呢?
+在这种情况下, 我们将不能获得值去使用map, 以至于 `purchase` 自动地以和`rateQuote`相同的异常
+而执行失败.
+
+总之, 如果最初的 future 执行成功了, 那么返回的值将会和 map 函数一起执行成功.
+如果 map 函数抛出了异常, 那么 future 就会带着该异常而失败.
+如果最初的future以异常结束, 那么那个返回的future也会以同样的失败结束.
+这种异常传导机制会适用于其他组合子(combinators).
+
+这种设计也同样被用于for语法(for-comprehensions).
+所以, futrues 同样也有 `flatMap`, `filter` 和 `foreach` 组合子.
+`flatMap` 方法传入一个函数, 它把值映射到一个新的 future `g`, 一旦 `g`执行完成, 就返回一个
+future.
+
+假设我们想把一些美元换成瑞士法郎(CHF). 我们要拉取两个货币的报价,
+接着根据两个报价来决定如何购买. 下面是一个在for-comprehensions中使用`flatMap`和`withFilter`的例子
+~~~~~~
+val usdQuote = future { connection.getCurrentValue(USD) }
+val chfQuote = future { connection.getCurrentValue(CHF) }
+
+val purchase = for {
+  usd <- usdQuote
+  chf <- chfQuote
+  if isProfitable(usd, chf)
+} yield connection.buy(amount, chf)
+
+purchase onSuccess {
+  case _ => println("Purchased " + amount + " CHF")
+}
+~~~~~~
+
+
 ## Projections ##
 ## Extending Futures ##
 # Blocking #

@@ -5,31 +5,115 @@ tags:
 - struts
 ---
 
+# Struts的工作原理及核心过滤器 #
+
+StrutsPrepareAndExecuteFilter过滤器其实是包含2部分的
+1. StrutsPrepareFilter:做准备
+2. StrutsExecuteFilter：进入Struts2的核心处理。
+如果是Struts2的请求就会进入该过滤器，处理完后，不放行（由结果类负责显示）。
+如果是非Struts2的请求，比如默认jsp的请求，直接放行。
+
+如果用不到其他过滤器，配置StrutsPrepareAndExecuteFilter即可;
+如果用到其他过滤器，还需要使用Struts2准备好的环境，
+使用`StrutsPrepareFilter`，`StrutsExecuteFilter`个过滤器，其他过滤器放在两者之间.
+~~~~~~
+<filter-mapping>
+    <filter-name> struts-prepare </filter-name>
+    <url-pattern>/* </url-pattern>
+</filter-mapping>
+<filter-mapping>
+    <filter-name>sitemesh </filter-name>
+    <url-pattern>/* </url-pattern>
+</filter-mapping>
+<filter-mapping>
+    <filter-name> struts-execute </filter-name>
+    <url-pattern>/* </url-pattern>
+</filter-mapping>
+~~~~~~
+
+![struts core](/img/struts_core.png)
+showcase: 各种应用的案例，在struts2-showcase里面找各种案例
+
+## 访问 struts2 静态资源 ##
+文档中介绍了，可以把静态资源放到org.apache.struts2.static或者template包中，
+可以直接访问，例如 访问template.aaa中的bbb.css，则
+`http://localhost:8080/day22_03_strutsStatics/struts/aaa/bbb.css`
+
+或者自己对静态资源访问的地址进行设置，在web.xml中设置
+~~~~~~
+<!-- 则访问com.itheima.statics中的资源ccc.css，的地址为 -->
+<!-- http://localhost:8080/day22_03_strutsStatics/struts/ccc.css -->
+<filter>
+    <filter-name>struts2</filter-name>
+    <filter-class>org.apache.struts2.dispatcher.ng.filter.StrutsPrepareAndExecuteFilter</filter-class>
+    <init-param>
+        <param-name>packages</param-name>
+        <param-value>com.itheima.statics</param-value>
+    </init-param>
+</filter>
+~~~~~~
+
 # Action的模式 #
 * action 是多实例的, 每请求一次, 将会创建一个对象
-* 不存在线程安全问题 
+* 不存在线程安全问题
 
-# struts2 结果集(result) #
-结果集的处理方式有多种, 通过 `type=**` 设置, 最常用的有
-`dispatcher` `redirect` `redirectAction`
+## 自动注入 ##
 ~~~~~~
-<!-- 请求转发到 jsp 或 其他资源 -->
-<result name="*" type="dispatcher"> </result>
-
-<!-- 请求重定向到 jsp 或 其他资源-->
-<result name="*" type="redirect"> </result>
-
-<!-- 重定向到action -->
-<result name="*" type="redirectAction"> </result>
+<form>
+    <input type="text" name="address.city"/>
+    <input type="checkbox" name="hobby" value="吃饭"/>
+    <input type="checkbox" name="hobby" value="睡觉"/>
+</form>
 ~~~~~~
+~~~~~~
+public class Action extends ActionSupport {
+     @BeanProperty private Address address;
+     @BeanProperty private String[] hobby;
+     @Override public String execute(){
+         println(address.getCity());
+         println(hobby); // struts2 会自动注入
+     }
+}
+~~~~~~
+
+## 在动作类中获取 servlet 相关对象引用 ##
+1. ServletActionContext的静态方法可以得到Servlet相关的对象
+~~~~~~
+//用Servlet相关的对象request response servletContext HttpSession
+HttpServletRequest request = ServletActionContext.getRequest();
+HttpServletResponse response = ServletActionContext.getResponse();
+ServletContext sc = ServletActionContext.getServletContext();
+HttpSession session = request.getSession();
+~~~~~~
+2. 实现ServletRequestAware接口，struts2框架就会把request对象注入进来，通过拦截器servletConfig。
+
+    Action实现如下接口，struts框架则会为其注入相应的Servlet API对象：
+`ServletRequestAware`, `ServletResponseAware`, `ServletContextAware`, 实现其他对象或者功能，参考拦截器servletConfig。
 
 # struts2 数据存储和显示 #
+
 
 在 servlet 中, 把数据放在**request, session, application*域中,
 在页面上利用el表达式来解决数据的存储和显示
 
+OGNL表达式就是针对一个称之为OGNL根对象和一个称为OGNL Context的Map对象进行操作的语言。
+
+OGNL表达式可以寻址Context内部的对象和直接调用根对象的属性或方法。
+
+## 获取域数据 ##
+
+~~~~~~
+ActionContext ac = ActionContext.getContext();
+ac.put("p", "request Scope"); // 相当于 req.setAttribute("", "")
+Map applicationMap = ac.getApplication()
+applicationMap.put("p", "application scope");  // servletContext.setAttribute();
+Map sessionMap = ac.getSession();
+sessionMap.put("p", "session scope");
+~~~~~~
+
 ## ValueStack ##
 * 在struts2中所有的数据都在 ValueStack 中
+* ValueStack里面有两个东西，一个是根,就是CompoundRoot，这是一个List集合，还有一个contextMap
 * ValueStack 的生命周期是一次请求, 被存在 request 域`"struts.ValueStack"`中
 * 获得 ValueStack 有三种方式
 ~~~~~~
@@ -42,49 +126,67 @@ public class ValueStackAction extends ActionSupport {
     }
 }
 ~~~~~~
-* ValueStack 结构分析
-~~~~~~java:
-// OnglValueStack implements ValueStack
-ValueStack vs = ActionContext.getContext().getValueStack();
-// CompundRoot extends ArrayList, 对象栈, 存放的是对象
-// root[0] -> ValueStackAction; 当前请求的action
-// root[1] -> DefaultTextProvider; 国际化
-CompundRoot root = vs.getRoot();
+### ValueStack 结构分析 ###
 
-// context isInstanceof OnglContext, Map 栈
-// CompundRoot root = OnglContext.getRoot()
-// context["request"] -> requestMap
-// context["session"] -> sessionMap
-// context["application"] -> applicationMap
-// context["action"] -> 当前请求的 action
-Map<String, Object> context = vs.getContext();
+OGNL是从一个称之为根栈和contextMap中取数据
+* CompoundRoot就是根的类型。它是List。一般称之为根栈.取对象的某个属性，OGNL表达式不需要加任何东西，直接写属性即可
 ~~~~~~
-* 操作对象栈数据
+<!-- 取得valueStack 中name的值,从上往下找-->
+name:<s:property value="name"/><br/>
+<!-- 打印的结果是name这个字符串 -->
+<s:property value="'name'"/>
 ~~~~~~
-ValueStack vs = ActionContext.getContext().getValueStack();
-//1. 添加到栈顶
-vs.push(obj);
-//2. 添加到栈尾
-vs.getRoot.add(obj);
-//3. 把一个map放入到了对象栈的栈顶
-vs.set("aa", obj);
+* OGNL中的contextMap：key和value. 使用#开头，表示从Context里面取数据。
+~~~~~~
+<s:property value="#session.p"/>
+~~~~~~
+* ActionContext常用的方法(Map)
+  * `put()`方法和`get()`方法就是往该Context Map对象中添加数据和取数据。
+  * `getApplication()`得到application域中的所有attribute的map对象;
+  * `getSession()`得到代表session域中的所有attribute的map对象；
+  * `getParameters()`得到代表所有请求参数的map对象；
+  * `getLocale()`()得到当前用户的Locale信息，是综合了session中保存的Locale与浏览器请求消息中的Locale的结果。
+  
+~~~~~~
+ActionContext ac = ActionContext.getContext();
+Map<String,Object> map = ac.getSession();
+out.write((String)map.get("p"));
+ValueStack vs = ac.getValueStack();
+String s = (String)((Map<String,Object>)vs.getContext().get("session")).get("p");
+ac.put("username", "cll");//向contextMap中放数据
+s = (String)ac.get("username");//取数据
+~~~~~~
 
-// 取出数据
-// 1. 取栈顶元素
-vs.getRoot().get(0);
-vs.peek();
-// 2. 移除栈顶元素
-vs.getRoot().remove(0);
-vs.pop();
-~~~~~~
-* 操作Map栈数据
-~~~~~~
-ValueStack vs = ActionContext.getContext().getValueStack();
-ServletActionContext.getRequest().setAttribute("key", "value");
+ServletActionContext类继承了ActionContext类，它额外再提供了一些方便的方法，主要是直接返回Servlet有关的API，
+例如，返回HttpServletRequest和HttpServletResponse等，它内部还是调用ActionContext内部保存的那个OGNL Context Map对象。
 
-// 存键值对到Map
-ActionContext.getContext().put("key", "value");
+### ValueStack中常用方法详解 ###
+* `pop` 把栈顶的remove
+* `push` 放到栈顶
+* `peek`获取栈顶
+* `set` 往根栈里面放东西，如果栈顶是Map，则直接放进去，
+如果不是Map，则建一个Map放进去, set方法不能设置栈顶的普通JavaBean对象的属性。
 ~~~~~~
+vs.set("p", "pp");//向栈顶压入一个Map(如果栈顶就是一个Map，直接使用了)。map中的元素的key是p，value是pp
+~~~~~~
+* `setValue` 设置值
+~~~~~~
+//相当于从栈顶依次查找谁有setItheima("牛13"), 都没有则报错。不会去大Map中找
+vs.setValue("itheima", "牛13");
+vs.setValue("date", 18);//某个对象的属性   
+~~~~~~
+*  `findValue(String expr)`, 如果expr以#开头，从contextMap中取。
+如果不加#，先从根栈找属性，没有找到。则从contextMap中，作为key来找了
+* `findString` 如果找的是Date对象，内部会转换成String对象
+~~~~~~
+ac.put("now", new Date());
+obj = vs.findValue("#now");
+out.write(obj+" "+obj.getClass().getName());
+//类型转换器把java.util.Date--->java.lang.String.确定表达式返回值就是String类型的才能用
+String str = vs.findString("#now");
+~~~~~~
+
+
 ## struts2显示(ognl) ##
 ognl: struts2的标签, 把 valueStack 中的数据显示到页面上
 
@@ -133,7 +235,21 @@ ServletActionContext.getRequest().setAttribute("person", person) -->
 
 
 #### property 标签用法 ####
+`<s:property>`标签用于输出某个OGNL表达式的值，并进行HTML和XML实体转换，
+可以认为其内部使用的是ValueStack对象的findString()方法。
+如果没有设置value属性，则输出ValueStack栈顶的对象，
+等效于输出“top”这个特殊的OGNL表达式，”top”表示栈顶的对象。
+如果采用不加#前缀的方式输出Context中的某个对象，
+这个对象必须是String类型，以此可以说明该标签内部调用的是ValueStack.findString()方法。
+
 ~~~~~~
+<s:property value="name"/><br/><!-- 相当于ValueStack.findString() -->
+<s:property value="top.name"/><br/><!-- top代表栈顶对象,取栈顶对象中的name值  -->
+<s:property/><br/><!-- 取栈顶对象 -->
+<s:property value="[1].name"/><br/><!-- [1]表示砍掉1个.再取第一个的name属性,后面的不管 -->
+<s:property default="木有" value="abc"/><br/><!-- 表示如果没有abc这个属性,则返回default的木有 -->
+<s:property value="'<hr/>'" escapeHtml="false"/><!-- escapeHtml默认的是ture,表示打印<hr/> -->
+
 <!--请求url:  url?a=hello  -->
 <s:property value="#parameters.a[0]"/> <!-- 输出: hello -->
 
@@ -237,6 +353,10 @@ ServletActionContext.getRequest().setAttribute("person", person) -->
 
 ### 其他操作标签 ###
 ~~~~~~
+<!-- <s:set>标签用于将某个值存入指定范围域中，
+通常用于将一个复杂的ognl表达式用一个简单的变量来进行引用。 -->
+<!-- scope属性：指定变量被放置的范围，该属性可以接受
+application、session、request、 page或action。该属性的默认值为action -->
 <!-- 给 request 域中的键值对取别名 -->
 <s:set value="#request.request_username" var="newname" scope="request"/>
 <s:property valut="#request.newname"/>

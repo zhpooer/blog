@@ -1,4 +1,4 @@
-title: 传智播客day30-struts提高
+title: 传智播客day30-struts拦截器
 date: 2014-05-15 09:09:51
 tags:
 - 传智播客
@@ -76,6 +76,101 @@ public class PrivilegeInterceptor implements Interceptor {
 </package>
 ~~~~~~
 
+## 案例: 执行效率统计拦截器 ##
+建立拦截器ElapsedTimeInterceprot实现Interceptor接口
+~~~~~~
+//动作方法及结果处理耗时统计拦截器
+public class ElapsedTimeInterceprot implements Interceptor {
+    public String intercept(ActionInvocation invocation) throws Exception {
+        long beginTime = System.nanoTime();//纳秒：1毫秒=1000000纳秒
+        String result = invocation.invoke();//放行：拦截前要做的事放在invocation.invoke()之前，拦截后放在之后
+        //结果处理完毕后执行
+        long endTime = System.nanoTime();
+        System.out.println(invocation.getInvocationContext().getName()+"动作执行耗时："+(endTime-beginTime)+"纳秒");
+        return result;
+    }
+    public void destroy() {}
+    public void init() {}
+}
+~~~~~~
+进行配置文件设置
+~~~~~~
+<package name="p1" extends="struts-default">
+    <interceptors>
+        <interceptor name="elapsedTime" class="com.itheima.interceptors.ElapsedTimeInterceprot"></interceptor>
+    </interceptors>
+    <action name="test1" class="com.itheima.action.HelloAction1" method="test1">
+        <!-- 需要获取request，所以必须先执行servletConfig拦截器 -->
+        <interceptor-ref name="defaultStack"></interceptor-ref>
+        <!-- 执行耗时统计拦截器 -->
+        <interceptor-ref name="elapsedTime"></interceptor-ref>
+        <result>/1.jsp<result>
+    </action>
+</package> 
+~~~~~~
+拦截器的扩展，定义拦截器小组
+~~~~~~
+<package name="p1" extends="struts-default">
+    <interceptors>
+        <interceptor name="elapsedTime" class="com.itheima.interceptors.ElapsedTimeInterceprot"></interceptor>
+        <!-- 自己定义一个拦截器小组 -->
+        <interceptor-stack name="myDefaultStack">
+            <interceptor-ref name="defaultStack"></interceptor-ref>
+            <interceptor-ref name="elapsedTime"></interceptor-ref>
+        </interceptor-stack>
+    </interceptors>
+    <action name="test1" class="com.itheima.action.HelloAction1" method="test1">
+        <!-- 执行自定义的拦截器小组 -->
+        <interceptor-ref name="myDefaultStack"></interceptor-ref>
+        <result>/1.jsp<result>
+    </action>
+</package>
+~~~~~~
+继续扩展配置设置
+~~~~~~
+<package name="mypackage" extends="struts-default" abstract="true">
+    <interceptors>
+        <interceptor name="elapsedTime" class="com.itheima.interceptors.ElapsedTimeInterceprot"></interceptor>
+        <interceptor name="sessionCheck" class="com.itheima.interceptors.SessionCheckInterceptors">
+            <!-- 说明test2动作方法不需要拦截 -->
+            <param name="excludeMethods">test2</param>
+        </interceptor>
+        <interceptor-stack name="myDefaultStack">
+            <interceptor-ref name="defaultStack"></interceptor-ref>
+            <interceptor-ref name="elapsedTime"></interceptor-ref>
+            <interceptor-ref name="sessionCheck"></interceptor-ref>
+        </interceptor-stack>
+    </interceptors>
+    <!-- 设置该包中的所有action配置默认拦截器 ，每个包只能指定一个默认拦截器 -->
+    <default-interceptor-ref name="myDefaultStack"></default-interceptor-ref>
+</package>
+~~~~~~
+
+## 案例: 用户登陆拦截器 ##
+是否登陆拦截器MethodFilterInterceptor(可以配置是否进行拦截excludeMethods属性,如上)
+
+权限判断拦截器继承MethodFilterInterceptor类，这样只对某些方法起作用，而对其他方法不起作用。 (配置文件如上)
+~~~~~~
+//执行动作方法前检查用户是否已经登录
+public class SessionCheckInterceptors extends MethodFilterInterceptor{
+    protected String doIntercept(ActionInvocation invocation) throws Exception {
+        String result = "login";//对应的就是一个结果
+        HttpSession session = ServletActionContext.getRequest().getSession();
+        User user = (User)session.getAttribute("user");
+        if(user!=null)
+            //如果用户有登录，则放行。
+            result = invocation.invoke();
+        //如果用户没有登录，则返回结果集。
+        return result;
+    }
+}
+~~~~~~
+配置文件需要在结果集中增加一个:
+~~~~~~
+<result name="login">/login.jsp</result>
+~~~~~~
+
+
 ## 属性驱动 ##
 在Action中声明一些属性, 这些属性能够获取表单中的值
 
@@ -114,6 +209,16 @@ public class PropertyDiveActionAction {
        return "form.jsp";
     }
 }
+~~~~~~
+
+### Tip ###
+属性驱动了利用了对象栈, 可以利用 `valueStack.setValue/setParameter`
+方法给对象中的属性赋值
+~~~~~~
+person = Person{name=hello};
+valueStack.push(person);
+valueStack.setValue("name", "hello2");
+assert(person.name == "hello2")
 ~~~~~~
 
 ## 模型驱动 ##
@@ -172,55 +277,4 @@ public ModelDriverAction extends ActionSuppoet implements ModelDriven<Person> {
 <!-- 复用intercept拦截-->
 <package extends="intercept"> </package>
 <package extends="struts-default"> </package>
-~~~~~~
-
-# struts2 校验(validate)机制 #
-~~~~~~
-public class ValidateAction extends ActionSupport {
-    @BeanProperty private String username;
-    @BeanProperty private String password;
-
-    public String testValidate(){
-        return "form.jsp"
-    }
-
-    @Override
-    public void validate(){
-        if("".equals(this.getUsername()) ||
-           "".equals) {
-           // 方式一:
-           // 会在对象栈中加入数组: actionErrors: []
-           // 通过设置 actionerror 
-           this.addActioinError("用户名不能为空");
-           // 方式二:
-           // 设置 fielderror
-           this.addFieldError("username", "用户名不能为空");
-           this.addFieldError("password", "密码不能为空");
-           this.addFieldError("password", "长度不能小于6"); // 不会覆盖前面的错误
-        }
-    }
-
-    // 验证方式二, 框架会自动执行 validateXXX() 方法
-    public void validateUserName(){}
-    public void validatePassword(){}
-}
-~~~~~~
-
-~~~~~~
-<!-- form.jsp -->
-<s:form>
-    <s:actionerror/>   <!-- 用于回显, 显示: 用户名不能为空 -->
-    <s:textfield name="username"> </s:textfield> <s:fielderror fieldname="username"> </s:fielderro>
-    <s:password name="password"> </s:password>  <s:fielderror fieldname="password"> </s:fielderror>
-</s:form>
-~~~~~~
-
-# Tip #
-属性驱动了利用了对象栈, 可以利用 `valueStack.setValue/setParameter`
-方法给对象中的属性赋值
-~~~~~~
-person = Person{name=hello};
-valueStack.push(person);
-valueStack.setValue("name", "hello2");
-assert(person.name == "hello2")
 ~~~~~~
