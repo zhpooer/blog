@@ -76,6 +76,29 @@ public class PrivilegeInterceptor implements Interceptor {
 </package>
 ~~~~~~
 
+## 拦截器执行 ##
+执行顺序: 按照拦截器的声明顺序, 从上到下执行, 执行完拦截器以后, 再执行 `Action`
+~~~~~~
+<interceptor-stack name="privilegeStack">
+<!-- 从上到下执行 -->
+    <interceptor-ref name="defaultStack"> </interceptor-ref>
+    <interceptor-ref name="privilege"> </interceptor-ref>
+</interceptor-stack>
+~~~~~~
+
+一个 pacakge 中可以有
+1. 结果集
+2. 拦截器
+3. action
+
+可以通过继承package, 来复用 `interceptor` 配置信息
+~~~~~~
+<!-- 声明intercept包,在内部使用公用拦截器 -->
+<package name="intercept" extends="struts-default"> </package>
+<!-- 复用intercept拦截-->
+<package extends="intercept"> </package>
+<package extends="struts-default"> </package>
+~~~~~~
 ## 案例: 执行效率统计拦截器 ##
 建立拦截器ElapsedTimeInterceprot实现Interceptor接口
 ~~~~~~
@@ -253,28 +276,4 @@ public ModelDriverAction extends ActionSuppoet implements ModelDriven<Person> {
         return "";
     }
 }
-~~~~~~
-
-## 拦截器执行 ##
-执行顺序: 按照拦截器的声明顺序, 从上到下执行, 执行完拦截器以后, 再执行 `Action`
-~~~~~~
-<interceptor-stack name="privilegeStack">
-<!-- 从上到下执行 -->
-    <interceptor-ref name="defaultStack"> </interceptor-ref>
-    <interceptor-ref name="privilege"> </interceptor-ref>
-</interceptor-stack>
-~~~~~~
-
-一个 pacakge 中可以有
-1. 结果集
-2. 拦截器
-3. action
-
-可以通过继承package, 来复用 `interceptor` 配置信息
-~~~~~~
-<!-- 声明intercept包,在内部使用公用拦截器 -->
-<package name="intercept" extends="struts-default"> </package>
-<!-- 复用intercept拦截-->
-<package extends="intercept"> </package>
-<package extends="struts-default"> </package>
 ~~~~~~

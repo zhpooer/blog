@@ -169,7 +169,7 @@ struts2中已经内置一些验证器 `com.opensymphony.xwork2.validator.validat
 ~~~~~~
 如何使用内置验证器：
 1. 对所有的动作方法都进行验证：在动作类相同的包中, 添加 `动作类名-validation.xml`使用。
-2. 针对某些动作进行验证：动作类名-动作别名-validation.xml（动作别名指Struts.xml中的action的name）
+2. 针对某些动作进行验证：动作类名-动作别名-validation.xml(动作别名指Struts.xml中的action的name))
 
 ~~~~~~
 <?xml version="1.0" encoding="UTF-8"?>
@@ -179,7 +179,8 @@ struts2中已经内置一些验证器 `com.opensymphony.xwork2.validator.validat
 <validators>
     <!-- 针对字段的验证：方式一（建议使用）.在一个字段上加上多个验证规则-->
     <field name="username" >
-        <field-validator type="requiredstring">
+    <!-- 不能为null或者""字符串, 默认会 trim -->
+        <field-validator type="requiredstring"> 
             <message>用户名是必须的</message>
         </field-validator>
     </field>
@@ -328,7 +329,7 @@ public class StrongpasswordFieldValidate extends FieldValidatorSupport {
     }
 }
 ~~~~~~
-对自定义的校验器进行配置
+对自定义的校验器进行配置(validators.xml)
 ~~~~~~
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE validators PUBLIC
@@ -338,7 +339,7 @@ public class StrongpasswordFieldValidate extends FieldValidatorSupport {
     <validator name="strongpassword" class="com.itheima.validators.StrongpasswordFieldValidate"/>
 </validators>
 ~~~~~~
-使用自定义的校验器(struts.xml中配置)
+使用自定义的校验器
 ~~~~~~
 <field name="password">
     <field-validator type="strongpassword">

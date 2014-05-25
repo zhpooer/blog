@@ -433,19 +433,3 @@ action = new testAction(); action.setAa("test2");
 -->
 <s:textfield name="aa" /> <!--输出: test2-->
 ~~~~~~
-
-### struts 参数设置 ###
-struts 在启动时, 会自动加载 /org/apache/struts2/default.property,
-来配置 struts 的运行参数, 也可以在`struts.xml`中配置
-
-* struts.i18n.encoding=UTF-8 struts2 默认的编码时utf8, 所以可以不用编码过滤器
-* struts.action.extension=action  url默认扩展名
-* struts.devMode=false  开发模式, 若为true, 则修改配置文件后, strut2会自动加载
-* struts.ui.theme=xhtml  ui的主题, 可以设为 simple
-
-~~~~~~
-<struts>
-    <constant name="struts.devMode" value="true/>
-    <constant name="struts.ui.theme" value="simple/>
-</struts>
-~~~~~~
