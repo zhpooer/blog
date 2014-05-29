@@ -203,13 +203,20 @@ nth-child() 选择器详解如下：
 * :nth-child(3n): 能选取每个父元素下的索引值是 3 的倍数 的元素
 * :nth-child(3n + 1): 能选取每个父元素下的索引值是 3n + 1的元素
 
+~~~~~~
+// 每个class为one的div父元素下的第一个子元素
+$("div[class='one'] :first-child")
+~~~~~~
 ## 表单对象属性过滤选择器 ##
 |  选择器    |   用法   |   说明 |
 |--------------|
-| :enabled   |  $(”input:enabled”)     | 匹配所有可用元素.意思是查找所有input中不带有disabled=”disabled”的input.不为disabled,当然就为enabled啦 |
-| :disabled  |  $(”input:disabled”)    | 匹配所有不可用元素.与上面的那个是相对应的 |
-| :checked   |  $(”input:checked”)     | 匹配所有选中的被选中元素(复选框、单选框等，不包括select中的option).这话说起来有些绕口 |
+| :enabled   |  $(”input:enabled”)     | 匹配所有可用元素 |
+| :disabled  |  $(”input:disabled”)    | 匹配所有不可用元素 |
+| :checked   |  $(”input:checked”)     | 匹配所有选中的被选中元素(复选框、单选框等，不包括select中的option) |
 | :selected  |  $(”select option:selected”)   | 匹配所有选中的option元素 |
+
+如果一个`<input disabled="true"/>`, 提交的时候, 不会提交,
+想让他提交 `<input readonly="readonly"/>`
 
 ## 表单选择器 ##
 

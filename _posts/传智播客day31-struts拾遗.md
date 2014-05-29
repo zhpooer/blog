@@ -64,16 +64,13 @@ request.setAttribute("str", new String[]{"a","b","c"});
 ~~~~~~
 * 投影查询
 ~~~~~~
-<!-- 打印fengjie=fengjie -->
-${name}=<s:property value="name"/><br/>
-<!-- 打印[10, 6, 4, 0] -->
-<s:property value="{5,3,2,0}.{#this*2}"/>
-<!-- 打印[5, 3, 2] -->
-<s:property value="{5,3,2,0}.{?#this*2}"/>
-<!-- 打印 [5] -->
-<s:property value="{5,3,2,0}.{^#this*2}"/>
-<!-- 打印 [2] -->
-<s:property value="{5,3,2,0}.{$#this*2}"/><br/>
+<s:property value="products.{name}"></s:property> <!-- 只要name属性 -->
+<!-- 遍历集合, 只要价格大于 1500的-->
+<s:property value="products.{?#this.price>1500}"></s:property>
+<!-- 遍历集合, 第一个符合-->
+<s:property value="products.{^#this.price>1500}"></s:property>
+<!-- 遍历集合, 最后一个符合-->
+<s:property value="products.{$#this.price>1500}"></s:property> 
 ~~~~~~
 * 类型转换
 ~~~~~~
@@ -105,248 +102,6 @@ ${name}=<s:property value="name"/><br/>
 </s:form> 
 ~~~~~~
 
-## struts 配置文件中的 ognl 表达式 ##
-~~~~~~
-<!-- request.setAttribute("uri", "test") -->
-<result name="test">
-%{#request.uri}.jsp
-</result>
-~~~~~~
-
-
-# 表单校验 #
-普通式的开发，用声明式的，细致的控制，用编程式的验证
-## 编程式验证 ##
-用代码，表达式的方式
-
-前提：动作类一般要求继承`ActionSupport`
-
-struts.xml配置文件中,对要验证的动作,需要提供name="input"的结果视图(回显)
-~~~~~~
-<action name="RegUser" class="com.itheima.action.UserAction" method="RegUser">
-    <result type="dispatcher" name="success">/WEB-INF/pages/main.jsp</result>
-    <result type="dispatcher" name="error">/WEB-INF/pages/commons/error.jsp</result>
-    <!-- 出现错误时转向的页面：回显 -->
-    <result name="input">/WEB-INF/pages/regist.jsp</result>
-</action> 
-~~~~~~
-
-针对所有动作进行验证：需要覆盖 `public void validate()`方法，
-方法内部如果不满足要求，调用addFieldError填充信息.
-~~~~~~
-@SkipValidation//用在不需要验证的动作方法上
-public String RegUserUI() {
-    return SUCCESS;
-}
- //对所有的动作方法进行校验
-public void validate(){
-//写你的校验代码ActionSupport里面有addFieldError()方法,把错误信息存起来.
-    if(StringUtils.isEmpty(user.getUsername())){
-        addFieldError("username", "请输入用户名");//向一个Map中存储错误消息。何时返回input视图，是由该Map中有无信息决定的。
-    }
-} 
-~~~~~~
-
-~~~~~~
-//针对某个动作方法进行校验 public String regUser(){}
-public void validateRegUser() {
-    // 写你的校验代码
-    if (user.getUsername() == null || user.getUsername().equals("")) {
-        addFieldError("username", "请输入用户名");
-    }
-}
-~~~~~~
-## 声明式验证 ##
-开发的时候，可以不写验证，后续增加声明式验证，
-写配置文件即可，编码式验证需要开始就要写
-
-struts2中已经内置一些验证器 `com.opensymphony.xwork2.validator.validators.default.xml`
-~~~~~~
-<!-- 打开xwork-core-2.*.jar包中的xwork-validator-1.*.dtd文件,复制表头 -->
-<!DOCTYPE validators PUBLIC 
-          "-//Apache Struts//XWork Validator 1.0//EN"
-          "http://struts.apache.org/dtds/xwork-validator-1.0.2.dtd"> 
-~~~~~~
-如何使用内置验证器：
-1. 对所有的动作方法都进行验证：在动作类相同的包中, 添加 `动作类名-validation.xml`使用。
-2. 针对某些动作进行验证：动作类名-动作别名-validation.xml(动作别名指Struts.xml中的action的name))
-
-~~~~~~
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE validators PUBLIC 
-          "-//Apache Struts//XWork Validator 1.0//EN"
-          "http://struts.apache.org/dtds/xwork-validator-1.0.2.dtd">
-<validators>
-    <!-- 针对字段的验证：方式一（建议使用）.在一个字段上加上多个验证规则-->
-    <field name="username" >
-    <!-- 不能为null或者""字符串, 默认会 trim -->
-        <field-validator type="requiredstring"> 
-            <message>用户名是必须的</message>
-        </field-validator>
-    </field>
-     <!-- 针对字段的验证：方式二.
-     <validator type="requiredstring">
-     <!-- 校验器中有trim方法,当把这个方法设置为false,那么用户名前后可以有空格 -->
-         <param name="trim">false</param>
-         <param name="fieldName">username</param>
-         <message>必须的用户名</message>
-     </validator>-->
-     <!-- 在使用配置文件的時候,只使用一种配置方式 -->
-     <field name="password">
-         <field-validator type="strongpassword">
-             <message>密码不够强壮</message>
-         </field-validator>
-     </field>
-</validators> 
-~~~~~~
-
-## 案例: 表单验证 ##
-
-~~~~~~
-<!-- 标签标示在此显示错误信息 -->
-<!-- 里面的属性标示显示该属性的错误信息,如果不写就显示所有错误信息 -->
-<s:fielderror fieldName="password" />
-<s:form action="RegUser" namespace="/user">
-    <!-- requiredLabel="true"表示在用户名旁边加 *(单纯加*,没有其他作用)； requiredPosition="left"表示 * 在左边 -->
-    <s:textfield key="hello" label="用户名" name="username" requiredLabel="true" requiredPosition="left"></s:textfield>
-    <s:textfield label="昵称" name="nick"></s:textfield>
-    <s:password label="密码" name="password"></s:password>
-</s:form> 
-~~~~~~
-
-~~~~~~
-public class UserAction extends ActionSupport implements ModelDriven<User> {
-    private User user = new User();
-    private Map<String, String> hobbies = new HashMap<String, String>();
-    public Map<String, String> getHobbies() {
-        hobbies.put("eat", "吃饭");
-        hobbies.put("sleep", "睡觉");
-        hobbies.put("study", "学java");
-        return hobbies;
-    }
-    public void setHobbies(Map<String, String> hobbies) {
-        this.hobbies = hobbies;
-    }
-    public String RegUser() {
-        try {
-            System.out.println(user);
-            // 调用service，保存数据
-            System.out.println("调用后台service，保存数据到数据库中");
-            return SUCCESS;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ERROR;
-        }
-    }
-    @SkipValidation//用在不需要验证的动作方法上
-    public String RegUserUI() {
-        return SUCCESS;
-    }
-     //对所有的动作方法进行校验
-//     public void validate(){
-//     //写你的校验代码
-//         if(StringUtils.isEmpty(user.getUsername())){
-//             addFieldError("username", "请输入用户名");//向一个Map中存储错误消息。何时返回input视图，是由该Map中有无信息决定的。
-//         }
-//     }
-    //针对某个动作方法进行校验
-//    public void validateRegUser() {
-//        // 写你的校验代码
-//        if (user.getUsername() == null || user.getUsername().equals("")) {
-//            addFieldError("username", "请输入用户名");
-//        }
-//    }
-    public User getModel() {
-        return user;
-    }
-}
-~~~~~~
-使用声明式校验器
-~~~~~~
-<validators>
-    <!-- 针对字段的验证：方式一（建议使用）.在一个字段上加上多个验证规则-->
-    <field name="username" >
-        <field-validator type="requiredstring">
-            <message>用户名是必须的</message>
-        </field-validator>
-    </field>
-     <!-- 针对字段的验证：方式二.
-     <validator type="requiredstring">
-     <!-- 校验器中有trim方法,当把这个方法设置为false,那么用户名前后可以有空格 -->
-         <param name="trim">false</param>
-         <param name="fieldName">username</param>
-         <message>必须的用户名</message>
-     </validator>-->
-     <!-- 在使用配置文件的時候,只使用一种配置方式 -->
-</validators>
-~~~~~~
-
-
-### 编写一个自定义校验器 ###
-~~~~~~
-public class StrongpasswordFieldValidate extends FieldValidatorSupport {
-    //object就是当前执行的动作类的实例
-    public void validate(Object object) throws ValidationException {
-        String fieldName = getFieldName();
-        Object value = getFieldValue(fieldName, object);
-        //验证
-        if(!(value instanceof String)){
-            addFieldError(fieldName, object);
-        }else{
-            String s = (String)value;
-            if(!isStrong(s)){
-                addFieldError(fieldName, object);
-            }
-        }
-    }
-    //判断s是否强大
-    private static final String GROUP1 = "abcdefghijklmnopqrstuvwxyz";
-    private static final String GROUP2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static final String GROUP3 = "0123456789";
-    private boolean isStrong(String s) {
-        boolean ok1 = false;
-        boolean ok2 = false;
-        boolean ok3 = false;
-        int length = s.length();
-        for(int i=0;i<length;i++){
-            if(ok1&&ok2&&ok3)
-                break;
-            String character = s.substring(i,i+1);
-            if(GROUP1.contains(character)){
-                ok1 = true;
-                continue;
-            }
-            if(GROUP2.contains(character)){
-                ok2 = true;
-                continue;
-            }
-            if(GROUP3.contains(character)){
-                ok3 = true;
-                continue;
-            }
-        }
-        return ok1&&ok2&&ok3;
-    }
-}
-~~~~~~
-对自定义的校验器进行配置(validators.xml)
-~~~~~~
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE validators PUBLIC
-          "-//Apache Struts//XWork Validator Definition 1.0//EN"
-          "http://struts.apache.org/dtds/xwork-validator-definition-1.0.dtd">
-<validators>
-    <validator name="strongpassword" class="com.itheima.validators.StrongpasswordFieldValidate"/>
-</validators>
-~~~~~~
-使用自定义的校验器
-~~~~~~
-<field name="password">
-    <field-validator type="strongpassword">
-        <message>密码不够强壮</message>
-    </field-validator>
-</field>
-~~~~~~
 # 防止表单重复提交 #
 可以利用 interceptor, 防止重复提交
 1. 在输入表单中加入<s:token/>标签
@@ -375,126 +130,16 @@ public class StrongpasswordFieldValidate extends FieldValidatorSupport {
 </s:form>
 
 <!-- error.jsp, 显示错误信息 -->
-<s:actionerrors></s:actionerrors>
+<s:actionerror></s:actionerror>
 ~~~~~~
 
-## 国际化显示中文信息 ##
+# 更改校验失败视图 #
 ~~~~~~
-<!-- 引入token的资源文件 -->
-<constant name="struts.custom.i18n.resources" value="io.zhpooer.token"> </constant>
-~~~~~~
-~~~~~~
-## 默认的国际化文件在org.message.struts2.struts-message.properties
-## io.zhpooer.token.properties
-struts.messages.invalid.token=已经提交过了
-struts.messages.error.content.type.not.allowed=不允许上传的文件类型
-~~~~~~
-
-# 文件上传 #
-真正干活的是 `FileUploadInterceptor`
-~~~~~~
-<s:form enctype="multipart/form-data">
-    <s:file name="resource"> </s:file>
-</s:form>
-~~~~~~
-
-~~~~~~
-public class UploadAction {
-// 如果是多个文件上传, 那么就用定义数组, 如果 File[] resource;
-    @BeanProperty private File resource;    // 得到文件
-    @BeanProperty private String resourceContentType; // 得到文件类型 MIME
-    @BeanProperty private String resourceFileName; // 得到文件的名称
-    public String execution(){
-        String bashPath = ServletContext.getServletContext().getRealPath("WEB-INF/upload");
-        File dir = new File(bashPaht+subPath);
-        dir.mkdirs();
-        String path  = dir + UUIDName();
-        FileUtils.copyFile(resource, new File(dir)); // common-io
-        return null;
-    }
+public class UserAction{
+    // 如果这个方法校验失败,默认视图是"input", 可以修改为 "loginInput"
+    @InputConfig(resultName="loginInput")
+    public String login(){}
 }
-~~~~~~
-配置上传文件信息
-~~~~~~
-<!-- 文件上传的最大值, 默认大小为2M-->
-<!-- <constant name="struts.multipart.maxSize" value="2097152"> </constant> -->
-<action>
-    <interceptor-ref name="defaultStack">
-        <param name="fileUpload.maximumSize">2097152</param>
-        <param name="fileUpload.allowedExtensions">txt,doc,pdf </param>
-        <!-- 可以在web.xml中查看, mime类型 -->
-        <param name="fileUpload.allowedTypes">application/msword </param>
-    </interceptor-ref>
-</action>
-~~~~~~
-
-# 文件的下载 #
-
-~~~~~~
-/*
-<action>
-    <result type="stream">
-        <param name="inputName"> inputStream </param>
-        <param name="contentDisposition">
-            attachment;filename=%{#fileName}.txt
-        </param>
-    </result>
-</action>
-*/
-public class DownloadAction {
-    @BeanProperty private InputStream InputStream;
-    public String download(){
-        String fileName = "";
-        String filePath = "";
-        String encoded = URLEnocoder.encode(fileName, ""utf-8);
-        ActionContext.getContext().put("fileName", encoded);
-        inputStream = new FileInputStream(filePath + fileName);
-    }
-}
-~~~~~~
-
-# 类型转换 #
-当数据类型及数据转换出现错误信息时, 框架自动会转向名称为input的结果集
-~~~~~~
-<!-- 输入 myname, mypassword -->
-<s:textfield name="user"> </s:textfield>
-<s:checkbox list="{'aa', 'bb'}" name="checkbox"/>
-~~~~~~
-
-~~~~~~
-public UserConverter extends StrutsTypeConverter {
-    // 从页面到Actioin的转换
-    public Object convertFromString(Map context, String[] values, Class clazz) {
-        String[] tmp = values[0].split(",");
-        User user = new User();
-        user.setUsername(tmp[0]);
-        user.setPassword(tmp[1]);
-        return user;
-    }
-    public String convertToString(Map context, Object o) {
-        if(o instanceof User){
-            return o.toString();
-        }
-        return null;
-    }
-}
-public class ConverterAction {
-    @BeanProperty private User user;
-}
-public class User {
-    @BeanProperty private String userName;
-    @BeanProperty pirvate String password;
-}
-~~~~~~
-局部类型转换器：要转换的属性所在的类相同的包下, 建立类名-conversion.properties的配置文件
-~~~~~~
-## 转换的字段名称=验证类全面
-birthday=
-~~~~~~
-全局类型转换器设置: 在根目录下建立 xwork-conversion.preperties
-~~~~~~
-## 转换后的类型=转换器
-User=UserConverter
 ~~~~~~
 
 # 使用标准插件--JFreeChart使用 #
@@ -574,3 +219,34 @@ public String queryOne(){
 </package> 
 ~~~~~~
 通过 `${pageContext.request.contextPath}/users/${id}.html` 访问
+
+# 异常处理 #
+如果发生错误, 要第一时间将错误转换成自定义异常错误抛出
+~~~~~~
+public class MySqlException extends Exception{
+}
+~~~~~~
+
+通过拦截器, 获取自定义异常
+~~~~~~
+public class MyExceptioinInterceptor extends AbstractInterceptor{
+    @Override
+    public String intercept(ActionInvocation ai) {
+        try {
+            return ai.invoke();
+        } catch(MySqlException e) {
+            ActionSupport action = ai.getAction();
+            action.addActionError("");
+            return "error";
+        }
+    }
+}
+~~~~~~
+
+可以设置全局错误页面
+~~~~~~
+<!-- 在package中设置 -->
+<global-exception-mapping>
+    <exception-mapping result="error" exception="java.lang.Exception"> </exception-mapping>
+</global-exception-mapping>
+~~~~~~

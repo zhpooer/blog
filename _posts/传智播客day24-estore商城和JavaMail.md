@@ -1,4 +1,4 @@
-title: 传智播客day24-Estore商城项目
+title: 传智播客day24-Estore商城和JavaMail
 date: 2014-05-06 09:07:03
 tags:
 - 传智播客

@@ -1,19 +1,71 @@
-title: 传智播客day30-struts拦截器
-date: 2014-05-15 09:09:51
+title: 传智播客day29-struts拦截器
+date: 2014-05-14 11:09:51
 tags:
 - 传智播客
 - struts
 ---
 
+# Struts的工作原理及核心过滤器 #
+
+StrutsPrepareAndExecuteFilter过滤器其实是包含2部分的
+1. StrutsPrepareFilter:做准备
+2. StrutsExecuteFilter：进入Struts2的核心处理。
+如果是Struts2的请求就会进入该过滤器，处理完后，不放行（由结果类负责显示）。
+如果是非Struts2的请求，比如默认jsp的请求，直接放行。
+
+如果用不到其他过滤器，配置StrutsPrepareAndExecuteFilter即可;
+如果用到其他过滤器，还需要使用Struts2准备好的环境，
+使用`StrutsPrepareFilter`，`StrutsExecuteFilter`个过滤器，其他过滤器放在两者之间.
+~~~~~~
+<filter-mapping>
+    <filter-name> struts-prepare </filter-name>
+    <url-pattern>/* </url-pattern>
+</filter-mapping>
+<filter-mapping>
+    <filter-name>sitemesh </filter-name>
+    <url-pattern>/* </url-pattern>
+</filter-mapping>
+<filter-mapping>
+    <filter-name> struts-execute </filter-name>
+    <url-pattern>/* </url-pattern>
+</filter-mapping>
+~~~~~~
+
+![struts core](/img/struts_core.png)
+showcase: 各种应用的案例，在struts2-showcase里面找各种案例
+
 # 拦截器 #
+
+拦截器的使用 ，源自Spring AOP(面向切面编程)思想, 采用 责任链 模式
+*  在责任链模式里,很多对象由每一个对象对其下家的引用而连接起来形成一条链。
+*  责任链每一个节点，都可以继续调用下一个节点，也可以阻止流程继续执行
 
 拦截器的目的: 如果一个业务逻辑方法中涉及到的逻辑相当复杂,
 可以把这些业务分离开, 如 启动日志, 权限检查, 文件上传, 保存用户,
 把这四方面全面分开, 实现松耦合
 
+常用struts2 拦截器
+~~~~~~
+<!-- 模型驱动 -->
+<interceptor-ref name="modelDriven"/>
+<!-- 文件上传 -->
+<interceptor-ref name="fileUpload"/>
+<!-- 参数解析封装 -->
+<interceptor-ref name="params">
+<!-- 类型转换错误 -->
+<interceptor-ref name="conversionError"/>
+<!-- 请求参数校验 -->
+<interceptor-ref name="validation">
+<!-- 拦截跳转 input 视图 -->
+<interceptor-ref name="workflow"> 
+~~~~~~
+
+
 意义: 把一些和业务逻辑没有关联的代码放入拦截器, 以实现业务逻辑和其他代码的松耦合
 
 ## 拦截器初探 ##
+所有实际开发中，自定义拦截器 只需要 继承 AbstractInterceptor类，
+提供 intercept 方法实现
 ~~~~~~
 public class InterceptorAction extend ActionSupport {
     public String saveUser() {
@@ -107,6 +159,9 @@ public class ElapsedTimeInterceprot implements Interceptor {
     public String intercept(ActionInvocation invocation) throws Exception {
         long beginTime = System.nanoTime();//纳秒：1毫秒=1000000纳秒
         String result = invocation.invoke();//放行：拦截前要做的事放在invocation.invoke()之前，拦截后放在之后
+        // 可以获得Action对象
+        ActionSupport as =  actioninvocation.getAction();
+        as.addFieldError("some wrong");
         //结果处理完毕后执行
         long endTime = System.nanoTime();
         System.out.println(invocation.getInvocationContext().getName()+"动作执行耗时："+(endTime-beginTime)+"纳秒");
@@ -156,7 +211,7 @@ public class ElapsedTimeInterceprot implements Interceptor {
         <interceptor name="elapsedTime" class="com.itheima.interceptors.ElapsedTimeInterceprot"></interceptor>
         <interceptor name="sessionCheck" class="com.itheima.interceptors.SessionCheckInterceptors">
             <!-- 说明test2动作方法不需要拦截 -->
-            <param name="excludeMethods">test2</param>
+            <param name="excludeMethods">user</param>
         </interceptor>
         <interceptor-stack name="myDefaultStack">
             <interceptor-ref name="defaultStack"></interceptor-ref>
@@ -193,87 +248,14 @@ public class SessionCheckInterceptors extends MethodFilterInterceptor{
 <result name="login">/login.jsp</result>
 ~~~~~~
 
+# 过滤器 和 拦截器 #
+使用Filter 进行权限控制, 过滤所有web请求(所有web资源访问)
 
-## 属性驱动 ##
-在Action中声明一些属性, 这些属性能够获取表单中的值
+使用拦截器 进行权限控制 ---- 主要拦截对Action访问(不能拦截JSP)
 
-在浏览器提交一个url请求时, 先创建一个action, 并且把action放入对象栈中,
-这个时候action的属性会出现在对象栈中,
-然后经过一个拦截器ParametersInterceptor拦截器,
-1. 获取页面上的表单中的name和value值
-2. 把上述name和value的值封装成一个map
-3. 根据 valueStack.setValue(name, value); 把页面上的值放到页面栈中
-
+# Tip #
 ~~~~~~
-<!-- form.jsp -->
-<!-- 提交表单后, action重新返回form.jsp, username会被设为 "aaa"
-     也可以回显表单元素如 property.username 和 property.password
--->
-<form action="{contextPath}/PropertyDriveAction_actionMethod">
-    <s:textfield name="username"> </s:textfield>
-    <s:password name="password"> </s:password>
-    <s:textfield name="phone"> </s:textfield>
-    
-    <s:property name="username"> </s:property>
-    <s:property name="password"> </s:property>
-    <s:property name="phone"> </s:property>
-</form>
-~~~~~~
-~~~~~~
-public class PropertyDiveActionAction {
-    @BeanProperty private String useranme;
-    @BeanProperty private String password;
-    @BeanProperty private String phone;
-    public String actionMethod(){
-       println(username); // 可以得到 表单元素
-       println(password);
-       println(phone);
-       ActontionContext().getContext().getValueStack().setParameter("username", "aaa");
-       return "form.jsp";
-    }
-}
+this.addActionError("");  // 业务逻辑错误
+this.addFieldError("");   // 验证错误
 ~~~~~~
 
-### Tip ###
-属性驱动了利用了对象栈, 可以利用 `valueStack.setValue/setParameter`
-方法给对象中的属性赋值
-~~~~~~
-person = Person{name=hello};
-valueStack.push(person);
-valueStack.setValue("name", "hello2");
-assert(person.name == "hello2")
-~~~~~~
-
-## 模型驱动 ##
-1. 创建一个javabean, javabean中的属性和页面中表单的name属性的内容保持一致
-2. 在Action中声明一个接口 ModelDriven<Person>
-3. 在action中声明一个属性 `model = new Person`
-4. 在action中重写 `getModel(){return model;}`, 返回 model 对象
-
-原理, 经历两个拦截器
-1. ModelDrivenIntercetper
-  1. 得到action
-  2. 由action强制转化成ModelDriver
-  3. 由`ModelDriver.getModel()` 获取模型对象
-  4. 把模型对象放入栈顶
-2. ParameterInterceptor, 把form表单的数据封装到相应的对象栈中的属性
-
-~~~~~~
-public class Person {
-    private String name;
-    private String password;
-    private String phone;
-}
-public ModelDriverAction extends ActionSuppoet implements ModelDriven<Person> {
-    private Person model = new Person();
-    public Person getModel() {
-       return this.model;
-    }
-    public String testModel(){
-        println(model.getName()); // 可以打印出
-        println(model.getPassword());
-        println(model.getPhone());
-        return "";
-    }
-}
-~~~~~~

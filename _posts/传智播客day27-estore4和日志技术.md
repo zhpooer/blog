@@ -1,4 +1,4 @@
-title: 传智播客day27-estore4
+title: 传智播客day27-estore4和日志技术
 date: 2014-05-11 09:01:06
 tags:
 - 传智播客

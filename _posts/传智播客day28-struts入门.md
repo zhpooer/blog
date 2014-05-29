@@ -4,187 +4,114 @@ tags:
 - 传智播客
 - struts
 ---
-# Servlet 缺点 #
-1. 写一个 servelt 需要在 web.xml 中配置8行, 如果一个系统中servlet很多, 会导致
-web.xml中文件中的内容多多
-2. 在项目中很多人编辑一个 web.xml 文件会出现文件冲突
-3. 在一个 servlet 中方法的入口只有一个, 如果在一个 servlet 中写很多方法, 这些方法
-应该传递参数, 根据每次请求参数不一致来判断执行哪个方法
-4. servlet 中的方法都有两个参数 request,response,这两个参数具有严重的容器依赖性,
-所以在servlet不能单独测试
-5. 如果在表单中的元素很多, 在servlet 中要想获取表单的数据,
-那么在servlet的方法必须调用大量的 `request.getParameter()`
-6. 在一个servlet属性中声明一个数据, 会存在线程安全问题
+# 框架概述 #
 
-优点: 因为是最底层的mvc, 所以效率比较高
+三大框架: 企业主流 JavaEE 开发的一套架构 Struts + Spring + Hibernate
 
-很多项目中对servlet 进行了重构, 重构目标是:
-1. 更有利于团队协作开发
-2. 把servlet的缺点一次进行修改
+框架是实现了部分功能的代码(半成品), 使用框架简化企业级软件开发
 
-# 重构 Servlet #
-在 web.xml 文件中只写一个servlet, 中控servlet
+学习框架, 清楚知道框架能做什么, 还有哪些工作需要自己编码实现
 
-model 层为action
+## Struts2 ##
 
-在中控 servlet 中利用java 的反射机制动态调用该action
+Struts2 是Web层开发框架, 是优秀的MVC框架
+* struts1 、webwork 、jsf 、SpringMVC 都是MVC 
 
-## 重构效果 ##
-只写一个servlet
- 
-只需要在 web.xml 配置一个 servlet
+MVC: 是一种思想, 是一种模式, 分为 Model模型, View视图, Controller控制器
+* MVC由来是Web开发
 
-## 步骤 ##
-* 创建一个servlet
+JavaEE软件三层结构: Web层(表现层), 业务逻辑层, 数据持久层 (sun提供JavaEE开发规范)
+JavaEE开发强调三层结构, Web层开发注重MVC
 
-    需求: 访问 `http://localhost:8080/userAction.action`, 调用 `UserAction.execute()`
+由传统 Struts1 和 WebWork 两个经典框架发展而来
+* Struts2 内核 webwork
+* Xwork提供了很多核心功能：前端拦截机（interceptor），运行时表单属性验证，类型转换，
+强大的表达式语言（OGNL – the Object Graph Navigation Language），IoC（Inversion of Control反转控制）容器等
+
+Struts2 和 Struts1 关系: 
+没有关系， Struts2 全新框架，引入WebWork很多技术和思想，
+Struts2 保留Struts1 类似开发流程
+
+
+## 核心功能 ##
+* 允许POJO（Plain Old Java Objects）对象 作为Action
+* Action的execute 方法不再与Servlet API耦合，更易测试
+* 支持更多视图技术（JSP、FreeMarker、Velocity）
+* 基于Spring AOP思想的拦截器机制，更易扩展
+* 更强大、更易用输入校验功能
+* 整合Ajax支持
+
+# strut2 快速入门 #
+
+Web层框架都会使用前端控制器模式(JavaEE模式)
+* javaWeb 编写的程序, 一次请求对应一个servlet, 此时servlet完成请求处理
+* 使用框架, 所有访问通过 前端控制器, 前端控制器已经实现了部分代码功能(通用代码),
+再交给不同 Action 来处理(请求分发), 一次请求, 对应一个Action
+
+Struts2 前端控制器: `ServletPrepareAndExecuteFilter`
+1. 编写请求页面
 ~~~~~~
-<listener>
-    <listener-class>ActionListener</listener-class>
-</listener>
-<servlet-mapping>
-    <servlet-name>...</servlet-name>
-    <url-parttern>*.actions</url-parttern>
-</servlet-mapping>
+<a href="${contextPath}/hello.action">访问Strut2</a>
 ~~~~~~
-* 写一个监听器
-
-    写一个监听器, 在该监听器中写一个Map, map中的key存放url的action中的部分: userAction, 
-    value 存放对应类的字符串形式, 把该map放入到application域中
-~~~~~~
-public class ActionListener implements ServletContextListener {
-    public void contextDestroyed(ServletContextEvent e) {
-        e.getSevletContext().setAttribute("actions", null);
-    }
-    public void contextInitialized(ServletContextEvent e) {
-       Map map = new HashMap<String, String>();
-       map.put("userAction", "cn.itcast.Action.UserAction");
-       e.getSevletContext().setAttribute("actions", map);
-    }
-}
-~~~~~~    
-* 中控 servlet 执行
-
-    1. 把url中的urserAction做一个解析
-    2. 提取 application 域中的map, 根据 userAction key, 找到value
-    3. 执行 `UserAction.execute(request, response)`
-
-~~~~~~
-public class ActionServlet extends HttpServlet {
-    public void doGet(req, resp){
-        String fullActionName = req.getRequestURI().subString(req.getContextPath().length); // userAction.action
-        String actionName = fullActionName.replace("^(.*)\\.action", "$1");
-        Map actionMap = getServletContext().getAttribute("actions");
-        String actionClassName = actionMap.get(actoinName);
-        String clazz = Class.forName(actionClassName);
-        Method m = clazz.getMethod("execute", HttpServletRequest.class, HttpServletResponse.class);
-        String result = method.invoke(clazz.newInstance(), req, resp); // 返回要转发地址
-        req.getRequestDispatcher(result).forward(req, resp);
-    }
-    public void doPost(req, resp) { doGet(req, resp); }
-}
-public class UserAction {
-    public string execute(HttpServletRequest res, HttpServletResponse resp) {
-        return "index.jsp";
-    }
-}
-~~~~~~
-
-# Servlet 进化史 #
-1. 03-05, mvc框架是 servlet
-2. apache 的 struts1,实现松耦合 , 没由解决容器依赖性问题
-3. webwork, 让action没有任何容器依赖性, 把文件上传, 检验工作和保存用户的工作松耦合
-4. struts 和 webwork整合成struts2
-
-# Struts HelloWorld #
-导入包:
-* freemarker, 模板
-* ognl, 表达式, 为了显示存储在数据, 功能类似于el表达式
-* struts2-core, struts核心包
-* xworks-core, web-work核心包
-
-
-1. 编写Web.xml
+2. web.xml 配置 struts2 前端控制器
 ~~~~~~
 <filter>
-    <filter-name>struts2 </filter-name>
-    <filter-class>
-        org.apache.struts2.dispatcher.ng.filter.strutsPrepareAndExecuteFilter
-    </filter-class>
+    <filter-name> struts2 </filter-name>
+    <filter-class> org.apache.struts2.dispatcher.ng.filter.StrutsPrepareAndExecuteFilter </filter-class>
 </filter>
 <filter-mapping>
-    <filter-name>struts2 </filter-name>
-    <url-pattern>/* </url-pattern>
+    <filter-name> struts2 </filter-name>
+    <url-pattern> /* </url-pattern>
 </filter-mapping>
 ~~~~~~
-
-3. 编写Action
+3. 执行过滤器后, 读取struts配置文件, 将请求分发, 在根目录下创建struts.xml
 ~~~~~~
-public class HelloWorldAction {
-    public String execute(){
-        println("hello")
-        return "index";
+<package name="default" namespate="/" extends="struts-defautl">
+   <!-- 将请求分发 给一个Action  -->
+   <action name="hello" class="io.zhpooer.HelloAction">
+       <!-- 将返回字符串与跳转页面绑定  -->
+       <result name="success">
+       </result>
+   </action>
+</package>
+~~~~~~
+4. HelloAction
+~~~~~~
+// struts2 处理请求的Action
+public class HelloAction{
+    // 编写 excute 方法, String 类型返回值, 无参数
+    public String excute(){
+        // 返回字符串来控制页面跳转
+        return "success";
     }
 }
 ~~~~~~
+## 运行流程图 ##
+![/img/struts_core.png]
+用户请求 -> StrutsPrepareAndExecuteFilter 核心控制器 ->
+ Interceptors 拦截器(实现代码功能) -> Action 的execuute -> 结果页面 Result
+* 拦截器 在 struts-default.xml 定义
+* 执行拦截器 是 defaultStack 中引用拦截器 
 
-4. 写配置文件, 在src下面写一个 struts.xml
-~~~~~~
-<struts>
-    <!-- package 功能是用来管理 action 的, 一般情况下package是针对模块划分的 -->
-    <!-- name 为 package 的名称, 是唯一的 -->
-    <!-- extends 实际上是把 package 中 name为 *struts-default* 包中所有的功能继承下来 -->
-    <!-- namespace 设置访问的相对路径, 和 配置 action 转向到jsp页面时的查找路径-->
-    <package name="helloworld" namespace="/" extends="struts-default">
-        <action name="helloworldAction" class="cn.itcast.action.HelloWorldAction">
-            <result name="index"> index.jsp </result>
-            <!-- same as below -->
-            <!-- <result name="index"> -->
-            <!--     <param name="location">index.jsp </param> -->
-            <!-- </result> -->
-        </action>
-    </package>
-</struts>
-~~~~~~
+# struts2 常见配置 #
 
-## struts2 好处 ##
-web.xml 中只有一个过滤器, 不用繁琐的配置
+## 配置文件的加载顺序 ##
 
-action就是一个简单的javabean, 与servlet容器没有任何依赖
+由核心控制器加载 StrutsPrepareAndExecuteFilter  (预处理，执行过滤) 
+1. default.properties 该文件保存在 struts2-core-2.3.7.jar 中 org.apache.struts2包里面 (常量的默认值)
+2. struts-default.xml 该文件保存在 struts2-core-2.3.7.jar(Bean、拦截器、结果类型)
+3. struts-plugin.xml 该文件保存在struts-Xxx-2.3.7.jar(在插件包中存在 ，配置插件信息)
+4. struts.xml 该文件是web应用默认的struts配置文件(实际开发中，通常写struts.xml)
+5. struts.properties 该文件是Struts的默认配置文件  (配置常量)
+6. web.xml 该文件是Web应用的配置文件 (配置常量)
 
-多出了一个struts.xml, 配置Action的行为
+后加载的文件会覆盖之前加载的文件常量内容
 
-# 配置文件解析 #
-
-在struts过滤器初始化时, 加载了几个配置文件
-`struts-default.xml(在struts2核心包的根目录下)` `struts.xml(供程序员使用)` `struts-plugins.xml`
-
-struts 先加载 `struts-default.xml`, 后加载 `struts.xml`, 如果出现相同元素, 后加载覆盖先加载
-
-`package` 分模块管理action,
-* 属性 `name`, 包名字, 值唯一
-* 属性 `extends`, 用法 `extends="struts-default"`,
-把 package 中 name为 *struts-default* 包中所有的功能继承下来
-~~~~~~
-<!-- 继承了 helloworld -->
-<package name="childOfHello" extends="helloworld" namespace="/" abstract="false"> </package>
-~~~~~~
-* abstract：可选值为true|false。说明他是一个抽象包。抽象包中没有action元素的。(默认为false)
-* 属性`namespace`, 与url相关,  如果 `namespace="/base"`,
-则要访问 `${contextPath/base/helloWorldaction.action}`, 但是 `${contextPath/base/a/helloWorldAction.action}`也能访问
-  * 查找规则, 先在 `/base/a` 下找, 然后在 `/base` 下找
-  * 如果`Action.execute()`返回了`"index"`, 则struts 会找根据配置文件在`/base/`文件夹下查找`index.jsp`
-* 标签 `<result name="name" type=""></result>`, 结果集
-  1. `Action.execute` 返回一个字符串, 返回的字符串要和struts的配置文件中的`result`标签的`name`属性值匹配
-  2. `name`属性, 可以省略, 默认为 *"success"*
-  3. `type`属性, 结果集类型, 可省略, 默认为值为 "dispatcher", 在`struts-default.xml` 定义 `<result-type name="dispatcher"/>`
-* `include` 标签, 保证可以存在很多个 struts 配置文件
-~~~~~~
-<struts> <include file="included-struts.xml"/> </struts>
-~~~~~~
-
-## 配置文件解析2 ##
+## Action配置 ##
 ### package标签 ###
+
+必须要为`<action>`元素 配置`<package>`元素  (struts2 围绕package进行Action的相关配置)
+
 必须直接或间接地继承自struts-default的包.
 
 作用: 方便管理我们的动作(struts-default是核心配置文件)
@@ -195,27 +122,37 @@ struts 先加载 `struts-default.xml`, 后加载 `struts.xml`, 如果出现相�
 * namespace：名称空间
 * extends：继承什么
 
-### action标签 ###
+~~~~~~
+<!-- name 包名称，在struts2的配置文件文件中 包名不能重复 ，name并不是真正包名，只是为了管理Action  -->
+<!-- namespace 和 <action>的name属性，决定 Action的访问路径  （以/开始 ） -->
+<!-- extends 继承哪个包，通常开发中继承 struts-default 包 （struts-default包在 struts-default.xml定义 ） -->
+<package name="default" namespace="/" extends="struts-default"></package>
+~~~~~~
+
+## action标签 ##
+
 * name: 必须的, 动作名称
 ~~~~~~
 <package name="p2" extends="struts-default">
     <!-- 只要找不到的action的name，找act4。默认动作名称 -->
     <default-action-ref name="act4"></default-action-ref>
-</package> 
+</package>
 ~~~~~~
-* class：可选的。默认值是com.opensymphony.xwork2.ActionSupport
+* class：可选的. 默认值是com.opensymphony.xwork2.ActionSupport
 ~~~~~~
 <package name="p2" extends="struts-default">
     <!-- 只要找不到的action的class，找com.opensymphony.xwork2.ActionSupport。默认class -->
     <default-class-ref name="com.opensymphony.xwork2.ActionSupport"></default-class-ref>
-</package> 
+</package>
 ~~~~~~
-* method: 可选. 默认值是`public String execute(){return "success"}`
+* method: 可选. 默认值是 `public String execute(){return "success"}`
 
-### result标签 ###
-type：默认值dispatcher。转发，目标JSP
+## result标签 ##
 
-name：默认值是success。
+type：默认值dispatcher. 转发，目标JSP
+
+name：默认值是success.
+
 ~~~~~~
 <package name="default" namespace="/test" extends="struts-default">
     <action name="hello" class="com.itheima.action.HelloAction" method="execute">
@@ -224,15 +161,307 @@ name：默认值是success。
     </action>
 </package>
 ~~~~~~
+
 访问包中带有名称空间的动作时：
-* `http://localhost:8080/day22_01_strutsHello/test/hello.action`
-* `http://localhost:8080/day22_01_strutsHello/test/aaa/bbb/hello.action`
+`http://localhost:8080/day22_01_strutsHello/test/hello.action`
+`http://localhost:8080/day22_01_strutsHello/test/aaa/bbb/hello.action`
 
 动作有搜索顺寻：
 1. 从/test/aaa/bbb找，不存在
 2. 从/test/aaa找，不存在
 3. 从/test，找到了
 4. 一旦找到就不向上找了
+
+## 默认Action 和 Action的默认处理类 ##
+
+默认Action ， 解决客户端访问Action不存在的问题 ，
+客户端访问Action， Action找不到，默认Action 就会执行
+~~~~~~
+<default-action-ref name="action元素的name" />
+~~~~~~
+
+默认处理类 ，客户端访问Action，已经找到匹配`<action>`元素，
+但是`<action>`元素没有class属性，执行默认处理类
+~~~~~~
+<!-- 在struts-default.xml 配置默认处理类 ActionSupport  -->
+<default-class-ref class="完成类名" />
+~~~~~~
+
+## 常量配置 ##
+在 struts2-core-*.jar 的`org.apache.struts2`的 default.properties文件中存在一些内置常量
+
+可以在 struts.properties, struts.xml, web.xml 
+~~~~~~
+<!-- request.setCharacterEncoding(), 针对post请求参数编码有效 -->
+<constant name="struts.i18n.encoding" value="UTF-8"></constant>
+<!-- 配置需要struts框架处理的uri的扩展名 -->
+<constant name="struts.action.extension" value="do,,action"></constant>
+<!-- 开发模式：打印更多的异常信息。配置文件会自动加载 -->
+<!-- devMode模式是开发模式，开启它则默认开启了struts.i18n.reload、struts.configuration.xml.reload -->
+<constant name="struts.devMode" value="true"></constant>
+<!-- 静态资源是不是设皇城, 开发阶段, 修改true -->
+<constant name="struts.server.static.browserCache" value="true"></constant>
+<!-- 配置不支持动态方法调用 -->
+<constant name="struts.enable.DynamicMethodInvocation" value="false"></constant>
+<!-- 让struts重新加载配置文件，但不会导致web应用重新启动。 -->
+<constant name="struts.configuration.xml.reload" value="false"></constant>
+<!-- 指定每次请求到达，重新加载资源文件 -->
+<constant name="struts.i18n.reload" value="true"/>
+<!-- 工厂类, 和spring 整合用 -->
+<constant name="struts.objectFactory" value="spring"/>
+<!-- 表达式直接访问static静态方法的开关 -->
+<constant name="struts.ognl.allowStaticMethodAccess" value="true"></constant>
+<!-- 配置全局国际化消息资源包,value写资源包的基名，多个资源包之间用逗号，分隔-->
+<constant name="struts.custom.i18n.resources" value="com.itheima.resources.msg"></constant>
+<!-- 更改strutsUI标签的显示样式模板，参考struts2-core-*.jar中的template -->
+<constant name="struts.ui.theme" value="xhtml"></constant>
+<!-- 动作名字里面默认是不允许出现/的,以下常量设置可以出现/ -->
+<constant name="struts.enable.SlashesInActionNames" value="true"></constant>
+<!-- 动作名字里面默认是不允许出现/的,如果有名称空间,除了以上常量,还需要打开这个开关 -->
+<constant name="struts.mapper.alwaysSelectFullNamespace" value="true"></constant>
+~~~~~~
+
+## struts2 配置文件分离 ##
+通过 `<include file="struts-part1.xml"/>` 将struts2 配置文件 拆分 
+
+# Action 的访问 #
+xwork 是一种标准的命令模式(执行`exexute()`)
+
+1. Action可以是 POJO (PlainOldJavaObjects)简单的Java对象,
+不需要继承任何父类，实现任何接口
+2. 编写Action 实现Action接口
+~~~~~~
+// Action接口中，定义默认五种 逻辑视图名称
+// 五种逻辑视图，解决Action处理数据后，跳转页面
+public static final String SUCCESS = "success";  // 数据处理成功 （成功页面）
+public static final String NONE = "none";  // 页面不跳转  return null; 效果一样
+public static final String ERROR = "error";  // 数据处理发送错误 (错误页面)
+public static final String INPUT = "input"; // 用户输入数据有误，通常用于表单数据校验 （输入页面）
+public static final String LOGIN = "login"; // 主要权限认证 (登陆页面)
+~~~~~~
+3. 编写Action, 继承ActionSupport(推荐), 在Action中使用 表单校验、错误信息设置、读取国际化信息 三个功能
+
+~~~~~~
+// 方式二
+public class MyAction implements com.opensymphony.xwork2.Action {
+    public String execute(){
+        return SUCCESS; // Action 中定义的常量, 匹配配置文件 struts.xml 中的 action.name
+    }
+}
+// 方式三
+public class MyAction extends com.opensymphony.xwork2.ActionSupport {
+    public String execute() { }
+}
+~~~~~~
+
+
+# Action的方法调用 #
+
+1. 在配置 `<action>` 元素时，没有指定method属性， 默认执行 Action类中 execute方法
+~~~~~~
+<action name="request1" class="cn.itcast.struts2.demo3.RequestAction1" />
+~~~~~~
+2. 在 `<action>` 元素内部 添加 method属性，指定执行Action中哪个方法
+~~~~~~
+<!-- 执行 RegistAction 的regist方法 -->
+<action name="regist" class="cn.itcast.struts2.demo4.RegistAction" method="regist"/> 
+ <!-- 将多个请求 业务方法 写入到一个Action 类中 -->
+ <action name="addBook" class="cn.itcast.struts2.demo4.BookAction" method="addBook" ></action>
+ <action name="delBook" class="cn.itcast.struts2.demo4.BookAction" method="delBook" ></action>
+~~~~~~
+3. 使用通配符* ，简化struts.xml配置
+~~~~~~
+<a href="${pageContext.request.contextPath }/user/customer_add.action">添加客户</a>
+<a href="${pageContext.request.contextPath }/user/customer_del.action">删除客户</a>
+
+<!-- struts.xml -->
+<!-- {1}就是第一个* 匹配内容 -->
+<action name="customer_*" class="cn.itcast.struts2.demo4.CustomerAction" method="{1}"></action>
+
+<!-- 方式一 -->
+<!-- 访问 ${contextPath}/m1/userAction.action 时,默认会调用 UserAction 的 saveUser 方法 -->
+<package name="method" namespace="/m1">
+    <action name="userAction" method="saveUser" class="**.UserAction">
+        <result>index.jsp</result>
+    </action>
+</package>
+
+<!-- 方式二 -->
+<!-- 访问 ${contextPath}/m2/userAction!deleteUser.action 时,
+     会调用 UserAction 的 deleteUser 方法 -->
+<package name="method" namespace="/m2">
+    <action name="userAction" class="**.UserAction">
+        <result>index.jsp</result>
+    </action>
+</package>
+
+<!-- 方式三 -->
+<!-- 访问 ${contextPath}/m3/a_add.action 或 ${contextPath}/m3/**_add.action 时,
+     都会调用 UserAction 的 saveUser 方法 -->
+<package name="method" namespace="/m3">
+    <action name="*_add" method="saveUser" class="**.UserAction">
+        <result>index.jsp</result>
+    </action>
+</package>
+
+<!-- 方式四 -->
+<!-- 访问 ${contextPath}/m4/saveUser_add.action 时,
+     会调用 UserAction 的 saveUser 方法 -->
+<package name="method" namespace="/m4">
+    <action name="*_add" method="{1}" class="**.UserAction">
+        <result>index.jsp</result>
+    </action>
+</package>
+
+<!-- 方式五 -->
+<!-- 访问 ${contextPath}/m5/UserAction_pattern.action 时,
+     会调用 UserAction 的 pattern 方法 -->
+<!-- 访问 ${contextPath}/m5/PersonAction_pattern.action 时,
+     会调用 PersonAction 的 pattern 方法 -->
+<package name="method" namespace="/m5">
+    <action name="*_pattern" method="pattern" class="cn.itcast.{1}">
+        <result>index.jsp</result>
+    </action>
+</package>
+
+<!-- 方式六 -->
+<!-- 访问 ${contextPath}/m6/UserAction_saveUser.action 时,
+     会调用 UserAction 的 saveUser 方法, 并返回 saveUser.jsp -->
+<package name="method" namespace="/m6">
+    <action name="UserAction_*" method="{1}" class="cn.itcast.UserAction">
+        <result>{1}.jsp</result>
+    </action>
+</package>
+<!-- 变体 -->
+<package name="method" namespace="/m6">
+    <action name="*_*" method="{2}" class="cn.itcast.{1}">
+        <result>{2}.jsp</result>
+    </action>
+</package>
+~~~~~~
+
+## 动态方法调用 ##
+访问Action中指定方法，不进行配置
+* 在工程中使用 动态方法调用 ，必须保证
+`struts.enable.DynamicMethodInvocation = true` 常量值 为true
+* 在action的访问路径 中 使用 "!方法名"
+
+~~~~~~
+<!-- 页面 -->
+<a href="${pageContext.request.contextPath }/user/product!add.action">添加商品</a>
+<!-- 配置 -->
+<action name="product" class="cn.itcast.struts2.demo4.ProductAction"></action>
+<!-- 执行 ProductAction 中的 add方法 -->
+~~~~~~
+
+# Action中使用 Servlet #
+1. 使用ActionContext 对象, 解耦合方式
+~~~~~~
+actionContext = ActionContext.getContext();
+// 获得所有请求参数Map集合
+actionContext.getParameters();
+// actionContext.get("company") 对request范围存取数据
+actionContext.put("company", "传智播客");
+// 获得session数据Map，对Session范围存取数据
+actionContext.getSession();
+// 获得ServletContext数据Map，对应用访问存取数据
+actionContext.getApplication(); 
+~~~~~~
+2. ServletActionContext的静态方法可以得到Servlet相关的对象
+~~~~~~
+//用Servlet相关的对象request response servletContext HttpSession
+HttpServletRequest request = ServletActionContext.getRequest();
+HttpServletResponse response = ServletActionContext.getResponse();
+ServletContext sc = ServletActionContext.getServletContext();
+HttpSession session = request.getSession();
+~~~~~~
+3. 使用接口注入的方式，操作Servlet API(耦合)
+
+    Action实现如下接口，struts框架则会为其注入相应的Servlet API对象：
+    `ServletRequestAware`, `ServletResponseAware`, `ServletContextAware`,
+    实现其他对象或者功能，参考拦截器servletConfig
+
+# 基于注解的开发 #
+注解基于约定, 根据默认规则, 实现无配置文件
+
+## 约定实现 ##
+1. 导入jar包  11个jar  +  struts2-convention-plugin-2.3.7.jar
+2. 在web.xml 配置前端控制器
+3. 编写页面
+4. 插件中 plugin配置文件
+~~~~~~
+<!-- 编写Action类，必须位于 action,actions,struts,struts2 四个包中 -->
+<constant name="struts.convention.package.locators" value="action,actions,struts,struts2"/>
+<!-- 以Action结尾 -->
+<constant name="struts.convention.action.suffix" value="Action"/>
+<!-- 结果result页面存放位置 -->
+<constant name="struts.convention.result.path" value="/WEB-INF/content/"/>
+
+<!-- Action被扫描后，如何确定Action的访问路径的 ？ -->
+<!-- HelloAction位于直接位于四个扫描包下，namespace是/，Action的name是hello, /hello.action -->
+cn.itcast.struts2.HelloAction
+<!-- BookSearchAction 不是直接位于四个扫描包下，namespace是/books, Action的name是book-search -->
+<!-- 访问路径 /books/book-search.action -->
+cn.itcast.actions.books.BookSearchAction 
+<!-- 访问 /user/user.action -->
+cn.itcast.struts.user.UserAction
+<!-- 访问 /test/login.action -->
+cn.itcast.estore.action.test.LoginAction  
+~~~~~~
+5. 根据常量配置 结果页面 位于 `/WEB-INF/content`下
+
+    页面命名规则约定： actionName + resultCode + suffix
+	例如： cn.itcast.struts.user.UserAction  
+    /user/user.action 返回 SUCCESS  
+    结果页面 /WEB-INF/content/user/user-success.jsp  
+    找不到 /WEB-INF/content/user/user-success.html  
+    找不到 /WEB-INF/content/user/user.jsp  
+
+## 注解实现 ##
+注解开发第一步 基于约定的自动扫描
+
+约定只解决Action访问和结果页面跳转问题
+* 在开发中需要为Action指定拦截器，进行更细节result配置
+* 约定不够灵活，注解的功能 是和 xml配置方式 等价的
+
+`<constant name="struts.convention.classes.reload" value="false" />` Action类文件重新自动加载
+
+~~~~~~
+@NameSpace("/user")
+@ParentPackage("struts-default")
+public class UserAction extends ActionSupport {
+   // `@ParentPackage` 配置`<package>` 继承哪个包
+   // `@Namespace`  配置包名称空间
+   // 使用 `@Action` 注解配置访问路径  `@Result` 注解 配置结果页面
+    @Action(value="login", results=@Result(name="success", location="/index.jsp"))
+    public String execute(){
+        return "success"
+    }
+    @Actions(value={
+      @Action(value="login", results=@Result(name="success", location="/index.jsp"))
+      , @Action(value="login2", results=@Result(name="success", location="/index.jsp"))
+    })
+    public String execute2(){
+        return "success"
+    }
+}
+~~~~~~
+
+# 结果页面的配置 #
+
+Action处理请求后， 返回字符串(逻辑视图名), 需要在struts.xml 提供 `<result>`元素定义结果页面
+
+局部结果页面 和 全局结果页面
+~~~~~~
+<action name="result" class="cn.itcast.struts2.demo6.ResultAction">
+    <!-- 局部结果  当前Action使用 -->
+ 	<result name="success">/demo6/result.jsp</result>
+</action>
+<global-results>
+    <!-- 全局结果 当前包中 所有Action都可以用-->
+	<result name="success">/demo6/result.jsp</result>
+</global-results>
+~~~~~~
 
 ## struts2 结果类型 ##
 1. 结果类型其实就是一个实现com.opensymphony.xwork2.Result的类，用来输出你想要的结果
@@ -358,7 +587,7 @@ return "success";
     }
 }
 ~~~~~~
-### plain ###
+### plainText ###
 `<result-type name="plainText" class="org.apache.struts2.dispatcher.PlainTextResult" />`
 
 显示指定页面的源代码（不好用，只有java语句才能显示源代码）
@@ -403,165 +632,3 @@ return "success";
     </action>
 </package>
 ~~~~~~
-
-### 全局结果类型 ###
-当很多提交请求跳转到相同的页面，这个时候，
-这个页面就可以成为全局的页面。在struts2中提供了全局页面的配置方法。
-~~~~~~
-<!-- 这个配置必须写在action配置的上面。dtd约束的规定。 -->
-<!-- 配置全局结果视图, 只能配置在package里, 但是可以通过继承来复用 -->
-<global-results>
-    <result name="success"> success.jsp </result>
-</global-results>
-~~~~~~
-
-# struts中存在一些内置常量 #
-在struts2-core-*.jar的org.apache.struts2的default.properties文件中存在一些内置常量
-
-~~~~~~
-<!-- request.setCharacterEncoding(), 针对post请求参数编码有效 -->
-<constant name="struts.i18n.encoding" value="UTF-8"></constant>
-<!-- 配置需要struts框架处理的uri的扩展名 -->
-<constant name="struts.action.extension" value="do,,action"></constant>
-<!-- 开发模式：打印更多的异常信息。配置文件会自动加载 -->
-<!-- devMode模式是开发模式，开启它则默认开启了struts.i18n.reload、struts.configuration.xml.reload -->
-<constant name="struts.devMode" value="true"></constant>
-<!-- 静态资源是不是设皇城, 开发阶段, 修改true -->
-<constant name="struts.server.static.browserCache" value="true"></constant>
-<!-- 配置不支持动态方法调用 -->
-<constant name="struts.enable.DynamicMethodInvocation" value="false"></constant>
-<!-- 让struts重新加载配置文件，但不会导致web应用重新启动。 -->
-<constant name="struts.configuration.xml.reload" value="false"></constant>
-<!-- 指定每次请求到达，重新加载资源文件 -->
-<constant name="struts.i18n.reload" value="true"/>
-<!-- 工厂类, 和spring 整合用 -->
-<constant name="struts.objectFactory" value="spring"/>
-<!-- 表达式直接访问static静态方法的开关 -->
-<constant name="struts.ognl.allowStaticMethodAccess" value="true"></constant>
-<!-- 配置全局国际化消息资源包,value写资源包的基名，多个资源包之间用逗号，分隔-->
-<constant name="struts.custom.i18n.resources" value="com.itheima.resources.msg"></constant>
-<!-- 更改strutsUI标签的显示样式模板，参考struts2-core-*.jar中的template -->
-<constant name="struts.ui.theme" value="xhtml"></constant>
-<!-- 动作名字里面默认是不允许出现/的,以下常量设置可以出现/ -->
-<constant name="struts.enable.SlashesInActionNames" value="true"></constant>
-<!-- 动作名字里面默认是不允许出现/的,如果有名称空间,除了以上常量,还需要打开这个开关 -->
-<constant name="struts.mapper.alwaysSelectFullNamespace" value="true"></constant> 
-~~~~~~
-
-常量可以在下面多个文件中进行定义，struts2加载常量的搜索顺序如下，后面的设置可以覆盖前面的设置：
-* default.properties文件
-* struts-default.xml
-* struts-plugin.xml
-* struts.xml
-* struts.properties（为了与webwork向后兼容而提供）
-* web.xml
-
-包含配置(<include>):在struts.xml文件这，使用<include>属性来包含其他配置文件，需要放在<struts>下,<package>外
-~~~~~~
-<include file="struts-mobile.xml"></include>
-~~~~~~
-# struts Action 初始化 #
-
-~~~~~~
-// 方式一
-public class MyAction implements com.opensymphony.xwork2.Action {
-    public String execute(){
-        return SUCCESS; // Action 中定义的常量, 匹配配置文件 struts.xml 中的 action.name
-    }
-}
-// 方式二
-// 封装了一些常用功能, 如国际化 表单验证 等功能
-public class MyAction extends com.opensymphony.xwork2.ActionSupport {
-    public String execute() { }
-}
-~~~~~~
-
-~~~~~~
-<!-- 方式三 -->
-<action name="anyName"> <!-- 没有写 class, 默认执行 com.opensymphony.xwork2.ActionSupport -->
-    <result> index.jsp </result>
-</action>
-~~~~~~
-## Action 依赖注入 ##
-
-~~~~~~
-public Action extends ActionSupport(){
-   @BeanProperty private String message;
-}
-~~~~~~
-~~~~~~
-<action>
-    <param name="message"> auto insert into </param>
-    <result type="redirect">/7.jsp?msg=${message} </result>
-</action>
-<!-- 7.jsp: ${param.msg} -->
-~~~~~~
-
-## 通配符映射 ##
-
-在配置文件的 Action 标签中, 可以配置 action 被执行行为
-~~~~~~
-<!-- 方式一 -->
-<!-- 访问 ${contextPath}/m1/userAction.action 时,默认会调用 UserAction 的 saveUser 方法 -->
-<package name="method" namespace="/m1">
-    <action name="userAction" method="saveUser" class="**.UserAction">
-        <result>index.jsp</result>
-    </action>
-</package>
-
-<!-- 方式二 -->
-<!-- 访问 ${contextPath}/m2/userAction!deleteUser.action 时,
-     会调用 UserAction 的 deleteUser 方法 -->
-<package name="method" namespace="/m2">
-    <action name="userAction" class="**.UserAction">
-        <result>index.jsp</result>
-    </action>
-</package>
-
-<!-- 方式三 -->
-<!-- 访问 ${contextPath}/m3/a_add.action 或 ${contextPath}/m3/**_add.action 时,
-     都会调用 UserAction 的 saveUser 方法 -->
-<package name="method" namespace="/m3">
-    <action name="*_add" method="saveUser" class="**.UserAction">
-        <result>index.jsp</result>
-    </action>
-</package>
-
-<!-- 方式四 -->
-<!-- 访问 ${contextPath}/m4/saveUser_add.action 时,
-     会调用 UserAction 的 saveUser 方法 -->
-<package name="method" namespace="/m4">
-    <action name="*_add" method="{1}" class="**.UserAction">
-        <result>index.jsp</result>
-    </action>
-</package>
-
-<!-- 方式五 -->
-<!-- 访问 ${contextPath}/m5/UserAction_pattern.action 时,
-     会调用 UserAction 的 pattern 方法 -->
-<!-- 访问 ${contextPath}/m5/PersonAction_pattern.action 时,
-     会调用 PersonAction 的 pattern 方法 -->
-<package name="method" namespace="/m5">
-    <action name="*_pattern" method="pattern" class="cn.itcast.{1}">
-        <result>index.jsp</result>
-    </action>
-</package>
-
-<!-- 方式六 -->
-<!-- 访问 ${contextPath}/m6/UserAction_saveUser.action 时,
-     会调用 UserAction 的 saveUser 方法, 并返回 saveUser.jsp -->
-<package name="method" namespace="/m6">
-    <action name="UserAction_*" method="{1}" class="cn.itcast.UserAction">
-        <result>{1}.jsp</result>
-    </action>
-</package>
-<!-- 变体 -->
-<package name="method" namespace="/m6">
-    <action name="*_*" method="{2}" class="cn.itcast.{1}">
-        <result>{2}.jsp</result>
-    </action>
-</package>
-~~~~~~
-
-**通配的程度越高, 匹配的范围越大, 越容易出问题**
-

@@ -1,4 +1,4 @@
-title: 传智播客day26-estore3
+title: 传智播客day26-estore3和支付技术
 date: 2014-05-09 09:05:29
 tags:
 - 传智播客
