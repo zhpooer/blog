@@ -6,7 +6,7 @@ tags:
 ---
 
 当前流行的 JavaScript 库有:
-jQuery, MooTools, Prototype, Dojo, YUI, EXT_JS, DWR(用java代码写)
+jQuery, MooTools, Prototype, Dojo, YUI, EXT_JS(强大, 学习成本高), DWR(用java代码写)
 
 # JQuery 初识#
 
@@ -23,6 +23,8 @@ log(#("#username").val());
 $(document).ready(function(){ /*todo*/ });
 // 方式二
 $().ready(function(){});
+// 方式三
+$(function(){});
 ~~~~~~
 
 # JQuery 对象 #
@@ -53,6 +55,11 @@ var inputObj = $inputObj[0];
 // 方式二:
 var domObj = $inputObj.get(0);
 ~~~~~~
+
+# jQuery 对象 #
+* 通过jQuery 包装DOM对象产生的对象
+* 是jQuery里面独有的, 可以使用jQeury中特有的方法
+* jQuery对象无法使用Dom中的方法, 反过来也一样
 
 # JQuery 选择器 #
 
@@ -128,6 +135,7 @@ $("#two").siblings(".div").css("background-color", "red");
 ~~~~~~
 $("div:first").css("background-color", "red"); // == $("div").first()
 $("div:not(.one)").css("background-color", "red");
+$("table tr:gt(0)").css("color", "blue");
 ~~~~~~
 
 ## 内容过滤选择器 ##
@@ -155,6 +163,7 @@ $('div:not(:empty)') // $('div:parent')
 
 ~~~~~~
 /*
+css 设置不可见, display:none|block|inline, visibility:hidden|visible
 index: 当前遍历的索引
 domElm: 当前遍历的DOM对象
 */
@@ -189,6 +198,9 @@ $("table:eq(0) tr:odd").css("background-color", "yellow");
 | [attribute* =value] |  $(”input[name*=‘man’]“)    | 匹配给定的属性是以包含某些值的元素  |
 | [attributeFilter1][attributeFilter2][attributeFilterN] | $(”input[id][name$=‘man’]“) | 复合属性选择器,需要同时满足多个条件时使用 | 
 
+~~~~~~
+$("[class *=value]").css("background", "yellow");
+~~~~~~
 ## 子元素过滤选择器 ##
 |  选择器    |   用法   |   说明 |
 |--------------|
@@ -233,3 +245,4 @@ $("div[class='one'] :first-child")
 | :button  |  $(”:button”)      | 匹配所有按钮.这个包括直接写的元素button |
 | :file  |  $(”:file”)          | 匹配所有文件域.|
 | :hidden  |  $(”input:hidden”) | 匹配所有不可见元素, 或者type为hidden的元素.这个选择器就不仅限于表单了, 除了匹配input中的hidden外,那些style为hidden的也会被匹配 |
+

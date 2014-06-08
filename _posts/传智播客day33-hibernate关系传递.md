@@ -75,14 +75,17 @@ session.close();
 
 ### 级联(Cascade) ###
 ~~~~~~
-<!-- 配置级联操作,
+<!-- cascade 配置级联操作, 通常在一方配置
      save-update: 在保存(save) 或更新(update)班级时,
      也保存(save)和更新(update)学生, 即使学生是临时状态
-     delete: 在删除班级的时候, 也删除学生
+     delete: 在删除班级的时候, 也删除学生, 删除脱管对象是无法产生级联效果
+     delete-orphan : 孤儿删除, 在解除班级和学校的关系时, 同时删除解除关系的学生对象, 主要用于一对多
      all: save-update, delete
+     all-delete-orphan: all delete-orphan
      -->
-<!-- inverse 维护关系
-             true 不维护(classes 不维护与 student 的关系)
+<!-- 默认两方都会维护外键关系, 实际开发中一般由多方维护关系
+             inverse 维护关系
+             true 不维护(classes 不维护与 student 的关系), 放弃维护关系
              false 维护
              default false-->
 <set name="students" cascade="save-update" inverse="true">
@@ -91,6 +94,7 @@ session.close();
 ~~~~~~
 在保存 Classes 时, 同时保存 students
 * cascade 通过更新班级 级联保存学生(决定插入学生, 但不决定建立外键关联)
+  * 删除脱管对象, 是**没有级联效果的**
 * inverse 建立班级和学生之间的关系(决定是不是建立外键关联)
 ~~~~~~
 Classes classes = new Classes();
@@ -203,7 +207,9 @@ for(Student s:students) {
   2. 在客户端通过多的一方建立关联
 
 ## 多对多 ##
-学生和课程的关系是多对多
+学生和课程的关系是多对多, 多对多不用配置 `cascade`.
+一方可以设置 `inverse=true`, 放弃外键的维护权,
+如果两方都维护, 可能会发生冲突
 ~~~~~~
 public class Student {
     @BeanProperty private Long sid;
@@ -254,8 +260,11 @@ public class Course {
 
 ## 一对一 ##
 ~~~~~~
-<!-- 方式一 -->
+<!-- 方式一, 外键关联 -->
 <many-to-one unique="true"></many-to-one>
+<!-- property-ref 对方外键属性名-->
+<one-to-one name="company" property-ref="address" class="Address"></one-to-one>
+
 <!-- 方式二: 主键关联, person 的主键是外键 -->
 <class name="Person">
     <id name="pid">
@@ -263,7 +272,177 @@ public class Course {
             <param name="property"> address </param>
         </generator>
     </id>
+    <!-- constrained 添加外键约束 -->
     <one-to-one name="address" constrained="true" class="Address"></one-to-one>
 </class>
 ~~~~~~
 
+
+# Hibernate 注解应用 #
+简化 hbm 配置
+
+版本3.6, 导入 `hibernate-annotation-jpa.jar`
+
+## 使用注解配置 PO 对象
+~~~~~~
+/难难难/ 优先导入
+import javax.persistance.*;
+
+@Entity
+@Tabel(name="")
+public class Book {
+    @Id
+    @GeneratedValue(strategy=GenerationType.IDENTITY)
+    private Integer id;
+    // 可以不写, 列名与名字一样, 也可以放到Get方法上
+    @Column(name="", length=, unique)
+    private String name;
+    // 生成日期类型
+    @Temporal(TemporalType.TIME | TemporalType.DATE | TemporalType.TIMESTAMP)
+    private Date time;
+    @Transient // 不生成数据表中的字段
+    private String noImportant;
+}
+~~~~~~
+~~~~~~
+<!-- hibernate.cfg.xml -->
+<mapping class="Book"> </mapping>
+~~~~~~
+
+### 使用Hibernate策略 uuid ###
+~~~~~~
+@Entity
+@Table(name="person")
+public class Person {
+    @Id
+    // 使用Hibernate uuid策略
+    @GenericGenerator(name="myuuidGen", strategy="uuid")
+    @GeneratedValue(generator="myuuidGen")
+    private String id;
+    private String name;
+}
+~~~~~~
+
+## 多表注解配置 ##
+
+### 一对多 ###
+~~~~~~
+@Entity
+@Table(naem="customer")
+public class Customer {
+    @Id
+    @GenerateValue(strategy=GenerationType.AUTO)
+    private Integer id;
+    private String name;
+    // targetEntity: 类型one-to-many class=
+    // mappedBy 作用 inverse=true
+    @OneToMany(targetEntity=Order.class, mappedBy="customer")
+    @Cascade(value={CascadeType.SAVEUPDATE}) // 配置级联
+    private Set<Order> orders;
+}
+
+public class Order {
+    @Id
+    @GenerateValue(strategy=GenerationType.AUTO)
+    private Integer id;
+    private String addr;
+    @ManyToOne(targetEntity=Customer.class)
+    // 添加外键类
+    @JoinColomn(name="customer_id")
+    private Customer customer;
+}
+~~~~~~
+
+### 多对多 ###
+配置多对多时, 只需要一端配置中间表, 另一端要配置 mappedBy(放弃外键)
+~~~~~~
+// 命名查询
+@NamedQueries(value=(@NamdQuery(name="findByName", query="from Customer"))
+public class Student {
+    private Integer id;
+    private String name;
+    @ManyToMany(targetEntity=Course.class)
+    // 当前列在中间表的列名, 对方列在中间表的列名
+    @JoinTable(name="student_couse", joinColumn={@JoinColumn(name="")},
+               inverseJoinColumns={@JoinColumn(name="")})
+    @Fetch(FetchMode.Select)
+    
+    @LazyCollection(LazyToCollectionOption.FALSE)
+    private Set courses;
+    @LazytoOn(LazyToOneOption.FALSE)
+    private Classes class;
+}
+
+public class Course {
+    // 放弃外键维护权
+    @ManyToMany(targetEntity=Student.class, mappedBy="courses")
+    private Set students;
+}
+~~~~~~
+
+# 继承类型映射 #
+
+三种继承策略
+1. 父类和子类的数据同一张表保存, 引入辨别者, 区分数据是父类数据还是子类数据
+2. join-subclass 父类和子类数据都是单独一张表，表之间通过外键表示继承关系
+3. unions-subclass(了解 ) 父类和子类都是单独一张表, 表之间没有任何联系 
+
+## subclass子类映射 ##
+~~~~~~
+public class Employee{}
+public class HourEmployee extends Employee{}
+public class SalaryEmployee extends Employee{}
+~~~~~~
+
+~~~~~~
+<!-- 在继承关系模型中，只需要对父类编写hbm映射就可以了 -->
+<hibernate-mapping>
+	<class name="cn.itcast.subclass.Employee" table="employee"
+           catalog="hibernate3day4" discriminator-value="ee">
+		<id name="id">
+			<generator class="identity"></generator>
+		</id>
+		<!-- 定义辨别者列 -->
+		<!-- 该列主要给Hibernate框架使用  -->
+		<discriminator column="etype"></discriminator>
+		<property name="name"></property>
+		
+		<!-- 每个子类 使用 subclass元素配置 -->
+		<subclass name="cn.itcast.subclass.HourEmployee" discriminator-value="he">
+			<property name="rate"></property>
+		</subclass>
+		<subclass name="cn.itcast.subclass.SalaryEmployee" discriminator-value="se">
+			<property name="salary"></property>
+		</subclass>
+	</class>
+</hibernate-mapping>
+~~~~~~
+## join-subclass子类映射 ##
+为父类数据和子类数据分布建表，公共信息放入父类表，
+个性信息放入子类表，通过外键关联
+
+~~~~~~
+<hibernate-mapping>
+	<class name="cn.itcast.joinedsubclass.Employee" table="employee" catalog="hibernate3day4" >
+		<id name="id">
+			<generator class="identity"></generator>
+		</id>
+		<property name="name"></property>
+		
+		<!-- 为每个子类表编写 joined-subclass 元素 -->
+		<joined-subclass name="cn.itcast.joinedsubclass.HourEmployee" table="h_employee">
+			<!-- 配置子类表 外键 -->
+			<!-- eid 是 子类表主键，同时也是外键，引入父类表 id -->
+			<key column="eid"></key>
+			<property name="rate"></property>
+		</joined-subclass>
+		<joined-subclass name="cn.itcast.joinedsubclass.SalaryEmployee" table="s_employee">
+			<key column="eid"></key>
+			<property name="salary"></property>
+		</joined-subclass>
+	</class>
+</hibernate-mapping>  
+~~~~~~
+
+## 结论 ##
+优先使用 joined-subclass, 如果类信息非常少, 也可以使用 subclass 

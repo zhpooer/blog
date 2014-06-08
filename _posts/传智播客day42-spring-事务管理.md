@@ -176,7 +176,7 @@ public class AccountDaoImpl extends JdbcDaoSupport implements AccountDao {
 
 ### 声明式事务管理 ##
 
-### TransactionProxyFactoryBean ##
+#### TransactionProxyFactoryBean ####
 通过 TransactionProxyFactoryBean 对业务类创建代理,
 实现声明式事务管理, 无需修改 Service 代码
 

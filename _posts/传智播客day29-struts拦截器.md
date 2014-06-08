@@ -210,7 +210,7 @@ public class ElapsedTimeInterceprot implements Interceptor {
     <interceptors>
         <interceptor name="elapsedTime" class="com.itheima.interceptors.ElapsedTimeInterceprot"></interceptor>
         <interceptor name="sessionCheck" class="com.itheima.interceptors.SessionCheckInterceptors">
-            <!-- 说明test2动作方法不需要拦截 -->
+            <!-- 说明test2动作方法不需要拦截, SessioncheckInterceptor 需要继承 MethodFilterIntercetpor -->
             <param name="excludeMethods">user</param>
         </interceptor>
         <interceptor-stack name="myDefaultStack">

@@ -221,8 +221,8 @@ fuunction parseXML(){
     return xmoDoc;
 }
 document.getElementById("province").onchange = function(){
-    // TODO 要先清理 city 选择框
-    
+    // 要先清理 city 选择框
+    document.getElementById("city").innerHTML = "";
     var xmlDoc = parseXML();
     var selectedProvice = this.value;
 
@@ -284,55 +284,6 @@ function viewData(pid, pname) {
 # js中的逻辑判断 #
 在运算逻辑中, 0, "", false, null, undefined, NaN 均为 false
 
-
-# JSON #
-
-JavaScript Object Notation, 比 xml 更轻巧, 是 JavaScript 的原生格式
-~~~~~~
-public void doGet(req, resp) {
-    resp.setContentType("text/html;charset=utf-8");
-    PrintWriter out = resp.getWriter();
-    String str = "{name:'山东'}";
-    out.write(str);
-}
-~~~~~~
-
-~~~~~~
-var xhr = createXmlHttpRequest();
-xhr.onreadystatechange = function() {
-    if(xhr.status==200 || xhr.status ) {
-       // 返回值是 json 的字符串形式
-       var data = xhr.responseText;
-       // 把普通的 json 文本转换成 json 数据
-       var json = eval("("+ data + ")");
-    }
-}
-~~~~~~
-
-## JSONlib 使用 ##
-
-~~~~~~
-// 省, 邮政编码
-Province p = new Provice("山东省", 250000);
-JSONObject jsonObj = JSONObject.fromObject(p);
-jsonObj.toString();   // {"name":"山东省", "zipcode":"250000"}
-
-// 输出数组
-Province p1 = new Provice("山东省", 250000);
-Province p2 = new Provice("浙江", 320000);
-List ps = new ArrayList<Province>();
-ps.add(p1);
-ps.add(p2);
-JSONArray jsonArr = JSONArray.fromObject(p2);
-jsonArr.toString() // [{name:**, zipcode:**},{name:**, zipcode:**}]
-
-// 过滤输出
-JsonConfig cfg = new JsonConfig();  
-cfg.setExcludes(new String[]{"zipcode"}); // 不包含的字段列表
-JSONArray jsonArr = JSONArray.fromObject(p2, cfg);
-jsonArr.toString() // [{name:**},{name:**}]
-
-~~~~~~
 
 # 使用小结 #
 * 若应用程序不需要与其他应用程序共享数据的时候,

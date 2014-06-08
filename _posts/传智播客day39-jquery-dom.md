@@ -5,12 +5,11 @@ tags:
 - jquery
 ---
 
-
 # 内部插入节点 #
-* append(content) :向每个匹配的元素的内部的结尾处追加内容
-* appendTo(content) :将每个匹配的元素追加到指定的元素中的内部结尾处
-* prepend(content):向每个匹配的元素的内部的开始处插入内容
-* prependTo(content) :将每个匹配的元素插入到指定的元素内部的开始处
+* append(content) : 向每个匹配的元素的内部的结尾处追加内容
+* appendTo(content) : 将每个匹配的元素追加到指定的元素中的内部结尾处
+* prepend(content) : 向每个匹配的元素的内部的开始处插入内容
+* prependTo(content) : 将每个匹配的元素插入到指定的元素内部的开始处
 
 ~~~~~~
 $("#city").append($("#fk"))
@@ -58,11 +57,15 @@ $().ready( function(){
 当某个节点用 remove() 方法删除后,
 该节点所包含的所有后代节点将被同时删除.
 这个方法的返回值是一个指向已被删除的节点的引用.
+* `detach`: 删除元素, 但是会保留事件
 * `empty()`: 清空节点 – 清空元素中的所有后代节点(不包含属性节点).
 
 ~~~~~~
-$("#bj").remove();
+var $bj = $("#bj").remove();
+
 $("#city").empty();
+
+
 
 $("<td></td>").append($("<a></a>").text("删除"));
 
@@ -110,6 +113,7 @@ removeAttr(): 删除指定元素的指定属性
 <input type="radio" value="radio2"/> radio2
 ~~~~~~
 ~~~~~~
+// 可以通过val(), 获取下拉框和单选框的值
 $("#single").val("Single2");
 $("#multiple").val(["Multiple2", "Multiple3"]);
 $("input").val(["check2", "radio1"]);
@@ -150,10 +154,81 @@ $("h1").each(function(){
 
 em是相对长度单位。相对于当前对象内文本的字体尺寸 
 
-
-# Jquery 验证框架 #
-~~~~~~
-<script type="text/javascript" src="jquery.js"/>
-<script type="text/javascript" src="jquery-validate.js"/>
+# 查找操作 #
 
 ~~~~~~
+$("#id").children("a");
+~~~~~~
+
+<!-- # Jquery 验证框架 # -->
+<!-- ~~~~~~ -->
+<!-- <script type="text/javascript" src="jquery.js"/> -->
+<!-- <script type="text/javascript" src="jquery-validate.js"/> -->
+<!-- ~~~~~~ -->
+
+
+# 事件机制 #
+jQuery提供的事件与传统的JS相同, 但是传统js只能对一个事件,
+绑定一个函数, jQuery 则不同
+
+~~~~~~
+// 方式一:
+$("#mydiv").click(function(){alert("")});
+// 方式二:
+$("#mydiv").bind("click", function(){alert("")});
+// 解除所有绑定
+$("#mydiv").unbind("click");
+
+// 事件委派, 可以为还没有生成的dom对象, 绑定事件
+$("div").live("click",function(){});
+// 通过die 来取消事件委派
+$("div").die("click");
+
+// 一次性事件 只绑定一次
+$("div").one("click", function(){});
+// 触发性事件, 触发 div2 上的click事件
+$("#div2").trigger("click");
+
+// 鼠标悬浮事件
+$("#id").hover(function1, function1);
+// 鼠标连续点击事件
+$("#id").toggle(function1, function1);
+
+// 事件的默认阻止和冒泡阻止
+// <a href="delete" id="delete"></a>
+$("delete").click(function(e){
+    event.preventDefault(); // 阻止默认事件
+});
+//阻止事件的传递
+$("p").click(function(e){
+    e.stopPropagation();
+});
+
+~~~~~~
+
+# jQuery Ajax 编程 #
+`$.ajax(url, [setting])`封装了所有ajax操作, 最底层的AJAX函数
+
+~~~~~~
+// Load
+// 把远程的数据直接加载到被选中的元素中
+// 把远程的数据直接加载到被选中的元素中
+// 如果有参数, 就用 post, 没有就用get
+// $("div").load(url, [data], [callback]);
+$("div").load("demo1", {condition: 1});
+
+// Get
+// $.get(url, [data], [callback], [type])
+// type: xml,htm,json,jsonp
+$.get("demo1", {condition:2}, function(data){
+    // data就是xmlHttp.responseText 处理后的结果
+});
+
+// Post 也是一样的
+$.post("demo2", {condition:2}, function(data){
+    // data 是xml, 转换成 jquery
+    $(data).find("province").each(function(){ 
+    });
+});
+~~~~~~
+

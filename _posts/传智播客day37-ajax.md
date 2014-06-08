@@ -23,7 +23,7 @@ AJAX: Asynchronous Javascript and XML, 允许浏览器和服务器通信而无�
 ~~~~~~
 // ServletDemo
 public void doGet(req, resp) {
-    resp.setContentType("text/html;charset=utf-8");
+    resp.setContentType("text/xml;charset=utf-8");
     PrintWriter out = resp.getWriter();
     
     // 返回 xml
@@ -55,10 +55,10 @@ window.onload = function(){ // 当页面被全部记载完毕后再执行
         
         // xhr的readyState 改变都会触发 onreadystatechange 事件
         // 0 (未初始化) 对象已建立，但是尚未初始化（尚未调用open方法） 
-		// 1 (初始化) 对象已建立，尚未调用send方法 
-		// 2 (发送数据) send方法已调用，但是当前的状态及http头未知 
-		// 3 (数据传送中) 已接收部分数据，因为响应及http头不全，
-		// 4 (完成) 数据接收完毕,此时可以通过通过responseBody和responseText获取完整的回应数据 
+        // 1 (初始化) 对象已建立，尚未调用send方法 
+        // 2 (发送数据) send方法已调用，但是当前的状态及http头未知 
+        // 3 (数据传送中) 已接收部分数据，因为响应及http头不全，
+        // 4 (完成) 数据接收完毕,此时可以通过通过responseBody和responseText获取完整的回应数据 
         xhr.onreadystatechange = function() {
             if(xhr.readyState == 4) {
                 // 数据正确返回
@@ -72,10 +72,10 @@ window.onload = function(){ // 当页面被全部记载完毕后再执行
                 }
             }
         }
-        // 初始化xhr对象
+        // 初始化xhr对象 ,// 建立与服务器的连接
         xhr.open("GET", "/ServletDemo?username=xxx");
-        // 建立与服务器的连接, 发送数据
         
+        // 发送数据
         // 如果是GET方法, 不会发送任何数据, 传递null即可
         xhr.send(null); 
         
@@ -83,6 +83,7 @@ window.onload = function(){ // 当页面被全部记载完毕后再执行
         // 设置请求消息头, 告知服务器, 发送的正文数据类型
         xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
         xhr.send("name=xxx&age=xxx");
+        // 或 xhr.send({name:"itcast"});
 
     }
 }
@@ -107,3 +108,165 @@ window.onload = function(){ // 当页面被全部记载完毕后再执行
 | responseXML        | 服务器返回数据兼容DOM的XML的文档对象 |
 | status             | 返回状态码, 404, 200 |
 | statusText         | 状态文本信息 |
+
+# 案例校验用户名 #
+
+~~~~~~
+<form>
+    <input type="text" id="username" name="username" onblur="checkUsername()"/>
+    <span id="checkResult"></span>
+    <input type="text" name="email"/>
+    <input type="submit"/>
+</form>
+<script type="text/javascript">
+function checkUsername(){
+     var nameInputElm = document.getElementById("username");
+     var xmlHttpReq = createXmlHttpRequest()
+     xmlHttpReq.onreadystatechange = function(){
+         if(xmlHttpReq.readyState == 4) {
+             if(xmlHttpReq.status == 200  || xhr.status == 304) {
+                 var result = xmlHttpReq.responseText;
+                 document.getElementById("checkResult").innerHTML = result;
+             }
+         }
+     };
+     xmlHttpReq.open("POST", "/checkUsername");
+     xmlHttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+     xmlHttpReq.send({username: nameInputElm.value})
+}
+</script>
+~~~~~~
+
+~~~~~~
+// checkUsernameServlet
+List names = Array.asList(new String[]{"abcd", "efg", "qwe"});
+public void doPost(request, response) {
+    response.setContentType("text/html;charset=utf-8");
+    request.setCharactorEncoding("utf-8");
+    String username = request.getParameter("username");
+    
+    if(names.contains(username)) {
+        response.getWriter().print("用户名已经存在");
+    } else {
+        response.getWriter().print("用户名不存在存在");
+    }
+}
+~~~~~~
+
+# JSON #
+
+JavaScript Object Notation, 比 xml 更轻巧, 是 JavaScript 的原生格式
+~~~~~~
+public void doGet(req, resp) {
+    resp.setContentType("text/json;charset=utf-8");
+    PrintWriter out = resp.getWriter();
+    String str = "{name:'山东'}";
+    out.print(str);
+}
+~~~~~~
+
+~~~~~~
+var xhr = createXmlHttpRequest();
+xhr.onreadystatechange = function() {
+    if(xhr.status==200 || xhr.status ) {
+       // 返回值是 json 的字符串形式
+       var data = xhr.responseText;
+       // 把普通的 json 文本转换成 json 数据
+       var json = eval("("+ data + ")");
+    }
+}
+~~~~~~
+
+## JSONlib 使用 ##
+
+~~~~~~
+// 省, 邮政编码
+Province p = new Provice("山东省", 250000);
+JSONObject jsonObj = JSONObject.fromObject(p);
+jsonObj.toString();   // {"name":"山东省", "zipcode":"250000"}
+
+// 输出数组
+Province p1 = new Provice("山东省", 250000);
+Province p2 = new Provice("浙江", 320000);
+List ps = new ArrayList<Province>();
+ps.add(p1);
+ps.add(p2);
+JSONArray jsonArr = JSONArray.fromObject(p2);
+jsonArr.toString() // [{name:**, zipcode:**},{name:**, zipcode:**}]
+
+// 过滤输出
+JsonConfig cfg = new JsonConfig();  
+cfg.setExcludes(new String[]{"zipcode"}); // 不包含的字段列表
+JSONArray jsonArr = JSONArray.fromObject(p2, cfg);
+jsonArr.toString() // [{name:**},{name:**}]
+
+~~~~~~
+
+## FlexJson ##
+flexjson 是一个轻量级的java类库, 序列化 Json
+
+* 序列化对象
+~~~~~~
+Product p = new Product(1, "冰箱", 200);
+p.setOrders(orders);
+JSONSerializer jsonSerializer = new JSONSerializer();
+// jsonStr:  {class:"zhpooer.Product" , id: 1, name: "冰箱", price: "200"}
+// 不会序列化集合
+String jsonStr = jsonSerializer.serialize(p);
+// 序列化文档
+String jsonStr =jsonSerializer.include("orders").serialize(p);
+// 排除序列化属性
+String jsonStr =jsonSerializer.exclude("name").serialize(p);
+// 使用注解排除属性 @JSON(include=false)
+~~~~~~
+
+# 服务器返回xml #
+Xml格式, 不依赖任何语言,, 跨平台第三方通用数据格式
+
+## xstream ##
+实现 xml 和 java 之间相互转换
+
+XMl解析方式: DOM, SAX, Stax(pull 解析采用Stax)
+
+导入jar包: `xstream,jar` `xpp3.jar`
+~~~~~~
+// 将对象转换为 xml
+User user = new User();
+user.setId(1);
+user.setName("");
+user.setGender("男");
+XStream xStream = new XStream();
+// 给User取别名
+xStream.alias("user", User.class);
+xStream.alias("users", List.class);
+String xml = xStream.toXML();
+
+// 解析XML
+XStream xStream = new XStream();
+xStream.alias("user", User.class);
+xStream.alias("users", List.class);
+xStream.fromXML(new FileInputStream("user.xml"));
+~~~~~~
+
+## 使用XML 注解 ##
+~~~~~~
+// 起别名
+@XStreamAlias("User")
+public class User{
+    @XStreamAsAttribute
+    private int id;
+    // 不使用
+    @XStreamOmitField
+    private String gender;
+}
+XStream xStream = new XStream();
+// 是注解生效
+xStream.autodetectAnnotations(true);
+~~~~~~
+
+
+# Tip #
+~~~~~~
+<!-- 不处理链接 -->
+<a href="javascript:void(0)">商品数据</a>
+~~~~~~

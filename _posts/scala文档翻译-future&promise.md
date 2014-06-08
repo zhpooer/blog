@@ -312,6 +312,32 @@ purchase onSuccess {
 }
 ~~~~~~
 
+一旦 `usdQuote` 和 `chQuote` 运算完成, future `purchase` 就会马上被执行, 它不能先于前两个future执行,
+因为它的运算依赖于它们.
+
+这个 for 表达式会被翻译成: 
+~~~~~~
+val purchase = usdQuote flatMap {
+  usd =>
+    chfQuote
+        .withFilter(chf => isProfitable(usd, chf))
+        .map(chf => connection.buy(amount, chf))
+}
+~~~~~~
+for表达式这有点难理解, 让我们分析一下, 以便于理解 `flatMap` 操作.
+`flatMap`操作把 自己(1)的值传递(map)到其他future执行运行. 一旦这个不同的futrue(2)的执行完毕,
+原先的最终的future会根据另一个不同的future(2)的值计算完毕. 在我们的案例中, `flatMap`利用了 `usdfutre` future的值,
+并把 `chfQuot` future 的值映射(map)到第三个future, 它的作用是发送请求去购买合适价格的瑞士法兰.
+
+这样思维上会绕些弯, 幸运的是 `flatMap` 操作几乎都是被用在 for 表达式(for comprehensions),
+这样很容易被理解和使用.
+
+`filter`组合子会生成一个新的 future, 在满足指定的条件时, 这个 future 会包含原始的future.
+否则, 这个新的future会以`NoSuchElementException`而执行失败.
+
+`colect` 组合子和 `filter`组合子的行为模式在 collection API中的行为是非常相似的.
+
+
 
 ## Projections ##
 ## Extending Futures ##
