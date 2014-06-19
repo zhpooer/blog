@@ -15,6 +15,8 @@ date: 2014-05-16 18:54:17
     宁耕田织布取衣食耳,
     断不可作医以误世!
 
+[四十年后你最不想留有的四十个遗憾](http://article.yeeyan.org/view/477079/411663)
+
 <embed src="http://www.xiami.com/widget/0_3603401/singlePlayer.swf" type="application/x-shockwave-flash" width="257" height="33" wmode="transparent"></embed>
 
     请不要伫立在我坟前哭泣 

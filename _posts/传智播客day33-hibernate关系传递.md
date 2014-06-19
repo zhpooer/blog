@@ -446,3 +446,27 @@ public class SalaryEmployee extends Employee{}
 
 ## 结论 ##
 优先使用 joined-subclass, 如果类信息非常少, 也可以使用 subclass 
+
+# 集合映射 #
+
+在实际开发中都是用有序的集合
+
+在hbm中使用 `bag` `list` `set`
+* `set` 不允许重复, 无序
+* `list` 允许重复, 有序
+* `bag` 无序,可以重复, 性能最好
+
+~~~~~~
+<!-- bag配置 -->
+<bag name="article">
+    <key column="auther_id"> </key>
+    <one-to-many class="Article"> </one-to-many>
+</bag>
+
+<!-- list配置, 在数据表中保存数据下标, 维护有序性-->
+<list name="article" cascade="all">
+    <key column="author_id"></key>
+    <list-index column="article_index"></list-index>
+    <one-to-many class="Article"> </one-to-many>
+</list>
+~~~~~~

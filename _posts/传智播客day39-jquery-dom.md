@@ -161,10 +161,10 @@ $("#id").children("a");
 ~~~~~~
 
 <!-- # Jquery 验证框架 # -->
-<!-- ~~~~~~ -->
+<!--  -->
 <!-- <script type="text/javascript" src="jquery.js"/> -->
 <!-- <script type="text/javascript" src="jquery-validate.js"/> -->
-<!-- ~~~~~~ -->
+<!--  -->
 
 
 # 事件机制 #
