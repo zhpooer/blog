@@ -94,3 +94,4 @@ tuple: 可以存储不同类型的集合
 
 [scala官方文档中文](https://code.csdn.net/DOC_Scala/chinese_scala_offical_document)
 
+[scala在线学习](http://scalatutorials.com/)

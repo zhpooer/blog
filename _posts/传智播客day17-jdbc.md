@@ -37,7 +37,7 @@ insert into users(name,password,email,birthday) values('gh','123','gh@k.com','19
 
 ~~~~~~
 DriverManager.registerDriver(new com.mysql.jdbc.Driver);
-Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/test", "root", "root");
+Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/test?characterEncoding=utf-8", "root", "root");
 Statement stmt = conn.createStatement();
 // resultset 是一个游标, 该游标可以滚动, 默认指向第一行的前面
 ResultSet rs = stmt.excuteQuery("select * from user");
