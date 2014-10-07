@@ -376,8 +376,8 @@ trait ReadOnly {
         case NoOption => cursor
       }
     }
-  applyOptions(find(query.q), query.option)
-}
+    applyOptions(find(query.q), query.option)
+  }
   def find(doc: DBObject): DBCursor = underlying find doc
   def findOne(doc: DBObject) = underlying findOne doc
   def findOne = underlying findOne
@@ -385,4 +385,5 @@ trait ReadOnly {
 }
 
 ~~~~~~
+
 
