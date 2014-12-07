@@ -4,6 +4,9 @@ date: 2014-05-16 18:54:17
 
 人生不易，满意即可
 
+此生如此漫长，若没有遇到有趣的人，那么将是多么无趣；
+此生如此短暂，若是自己不努力成为一位有趣的人，那么将是多么无趣。
+
 [杨志平的网志](http://www.yangzhiping.com/psy/guid3.html)
 
 [十年成为程序员](http://www.nowamagic.net/librarys/veda/detail/2598)
