@@ -105,7 +105,10 @@ body, h1, p, input, div, span, a, img, ul, li, ol, dl, dt, dd, h2, h3, h4, h5, h
 body {
   color: #393939;
   font-size: 12px;
-  font-family: Verdana, Microsoft YaHei, Simsun;
+  font-family: "Verdana", "Microsoft YaHei", "Simsun";
+  font-family:  "Microsoft YaHei", "SimHei";
+  /* 大小 行高 字体*/
+  font: 100px/1.5 "宋体", "黑体";
 }
 a {
   color: #393939;
@@ -293,10 +296,69 @@ overflow: hidden; /**hack ie6 **/
 ~~~~~~
 
 
+# IE6 hack #
+
+* 选择器 hack
+  * 针对ie6 `*html.header{width: 100px;}`
+  * 针对ie7 `*+html.header{width: 100px;}`
+* 属性 hack
+  * ie6: `_color: red`
+  * ie7及其以下: `*color: red`
+* 后缀 hack
+  * ie6-10: `color:red\9`
+  * ie8-10: `color:red\0`
+  * ie9, 10: `color:red\9\0`
+* 浏览器hack
+~~~~~~
+<!--[if IE]> 只能被ie识别 ;<![endif]-->
+<!--[if IE 6]> 只能被ie6识别 ;<![endif]-->
+<!--[if gte IE 6]> <![endif]-->
+<!--[if gt IE 6]>  ;<![endif]-->
+<!-- lte lt -->
+
+<!-- 判断不是ie -->
+<!--[if ! ie]><!-->要判断的内容<!--<![endif]-->
+~~~~~~
+ 
+行内块间距问题
+1. 去掉换行
+2. 加上注释
+~~~~~~
+<span></span><!--
+--><span></span>
+~~~~~~
+3. `margin-left: -8px`
+4. `word-spacing: -8px`
+5. 父盒子 `font-size: 0`
+
+## ie6 bug ##
+
+ie6注释引起的bug(多余字符)
+1. 去掉注释
+2. 加上空格
+3. 加`position:relative`
+
+ie6 li出现空白间隙, 因为li里面浮动太复杂, 导致有间隙;
+解决方法 `vertical-lign: middle;`
+
+绝对定位, 父盒子奇数长宽, 出现间距; 解决办法, 尽量奇数
+
 # Tip #
 
 `text-indent: 9999em` 控制隐藏文字, 优化 logo
 
 表单标签和表单标签对齐, 或表单标签和普通标签对齐,
 那么用浮动 `float`, 浮动可以实现完全没有间距的左对齐和顶对齐
+
+ie6 float 浮动会自动展开, 除非给他加确定的宽度
+
+ie6元素高度给设置成19px以下, 设置不了, `overflow: hidden`
+
+`white-space: pre` 不合并空格; `nowrap` 强制在同一行显示所有文本
+
+`text-overflow: ellipsis`, 如果文本溢出, 显示省略号
+
+~~~~~~
+<div title="tooltip"></div>
+~~~~~~
 

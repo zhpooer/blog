@@ -1,4 +1,4 @@
-title: BOM&DOM 基本语法
+title: BOM 基本语法
 date: 2014-11-23 18:51:30
 tags:
 ---
@@ -24,6 +24,8 @@ clearTimeout(timeoutId);
 // interval
 var intervalId = setInterval(doFunc, 500);
 clearInterval(intervalId);
+
+var b = comfirm("any");
 
 // prompt
 var result = prompt("What is your name?", "")
@@ -112,97 +114,50 @@ history.go("wrox.com"); // 跳转到最近的 wrox.com 的页面
 
 ~~~~~~
 
-# DOM #
+# Tips #
 
 ~~~~~~
-var returnedNode = someNode.appendChild(newNode);
-log(returnedNode == newNode); // true
+var win = window.open('about:blank');
+// 清空页面并写入
+win.document.write();
+win.close(); // 关闭窗口
 
-returnedNode = someNode.insertBefore(newNode, null);
-log(returnedNode == someNode.lastChild); // true
-
-returnedNode = someNode.insertBefore(newNode, someNode.firstChild);
-log(returnedNode == someNode.firstChild); // true
-
-returnedNode = someNode.insertBefore(newNode, someNode.lastChild);
-log(newNode == someNode.childNodes[someNode.childNodes.length - 2]);
-
-// 替换
-var returnedNode = someNode.replaceChild(newNode, someNode.firstchild);
-
-var formerFirstChild = someNode.removeChild(someNode.firstChild);
-
-var html = document.documentElement;
-html == docuemnt.childNodes[0];
-html == docuemnt.firstChild;
-
-var body = document.body;
-var doctype = document.doctype;
-
-// 取得完整的URL
-var url = document.URL;
-
-// 取得域名
-var domain = document.domain;
-// 获得来源域名的URL
-var referer = document.referer;
-
-// 当前页面是 p2p.wrox.com
-document.domain = "wrox.com";  // ok
-document.domain = "nczonline.net"; // failed
+// 可视区居中, 可以用 fixed 但是 ie6 不支持
+window.onresize = window.onload = window.onscroll = function (){
+  var oDiv = document.getElementById('div');
+  var scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+  var t = (document.documentElement.clientHeight - oDiv.offsetHeight)/2;
+  oDiv.style.top = scrollTop + t + 'px';
+  }
 
 
-// 查找元素
-
-document.getElementById("myDiv");
-// 返回 HTMLCollection
-var imgs = document.getElementByTagName("img");
-imgs.length;
-imgs[0].src;
-imgs.item(0).src;
-imgs.namedItem("myImage");
-
-// 获取文档中的所有元素
-var allElements = document.getElementByTagName("*")
-
-document.anchors;
-document.forms;
-document.images;
-document.links;
-
-// 文档写入
-document.write("<strong>" + (new Date()).toString() + "</strong>");
-
-element.tagName.toLowerCase() == "div"; // 判断是不是div
-
-var div = document.getElementBy("myDiv");
-div.tagName == div.nodeName; // true
-div.id;
-div.className;
-div.title;
-div.lang;
-div.dir;
-div.getAttribute("title");
-div.removeAttribute("title");
-div.setAttribute("title", "xx");
-
-element.attributes.getNameItem("id").nodeValue;
-element.attributes.removeNameItem("id");
-
-var div = document.createElement("div");
-div.di = "";
-div.className = "box";
-
-document.body.appendChild(div);
-
-document.createTextNode("Hello world.");
-//  合并多个文本节点
-element.normalize();
-
-
-val attr = document.createAttribute("align");
-attr.value = "left";
-element.setAttributeNode(attr);
 ~~~~~~
 
-根据html5属性, 自定义特性应该加上 `data-`前缀
+~~~~~~
+window.onload=function () {
+  var oBtn=document.getElementById('btn1');
+  var bSys=true;
+  var timer=null;
+
+  //如何检测用户拖动了滚动条
+  window.onscroll=function () {
+    if(!bSys) {
+      clearInterval(timer);
+    }
+    bSys=false;
+  };
+
+  oBtn.onclick=function () {
+    timer=setInterval(function (){
+      var scrollTop=document.documentElement.scrollTop||document.body.scrollTop;
+      var iSpeed=Math.floor(-scrollTop/8);
+
+      if(scrollTop==0) {
+        clearInterval(timer);
+      }
+      bSys=true;
+      document.documentElement.scrollTop=document.body.scrollTop=scrollTop+iSpeed;
+    }, 30);
+  };
+};
+~~~~~~
